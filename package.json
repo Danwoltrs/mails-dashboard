@@ -1,0 +1,32 @@
+{
+  "name": "mails-wolthers-dashboard",
+  "version": "1.0.0",
+  "description": "Email analytics dashboard for mails.wolthers.com",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "15.4.7",
+    "next-auth": "^4.24.10",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.13.3",
+    "formidable": "^3.5.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-next": "15.4.7"
+  },
+  "keywords": [
+    "email",
+    "analytics",
+    "dashboard",
+    "wolthers"
+  ],
+  "author": "Wolthers & Associates",
+  "license": "ISC"
+}

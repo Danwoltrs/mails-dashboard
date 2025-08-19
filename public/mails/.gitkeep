@@ -1,0 +1,2 @@
+# This file ensures the mails directory is included in git
+# Actual CSV files are ignored for privacy but the directory structure is preserved
