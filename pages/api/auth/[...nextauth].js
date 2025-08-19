@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth'
 import AzureADProvider from "next-auth/providers/azure-ad"
 
-export default NextAuth({
+export const authOptions = {
   providers: [
     AzureADProvider({
       clientId: process.env.AZURE_AD_CLIENT_ID,
@@ -35,4 +35,6 @@ export default NextAuth({
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
-})
+}
+
+export default NextAuth(authOptions)

@@ -1,5 +1,4 @@
 import { getProviders, signIn, getSession } from "next-auth/react"
-import { getServerSideProps } from "next"
 import Head from "next/head"
 
 export default function SignIn({ providers }) {
