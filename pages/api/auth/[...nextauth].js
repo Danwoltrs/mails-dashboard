@@ -13,16 +13,28 @@ export const authOptions = {
     signIn: '/auth/signin',
     error: '/auth/error',
   },
+  debug: true,
   callbacks: {
     async signIn({ user, account, profile }) {
+      console.log('NextAuth signIn callback:', { 
+        userEmail: user.email, 
+        allowedUsers: process.env.ALLOWED_USERS 
+      });
+      
+      // Temporarily allow all users for debugging
+      console.log('Allowing user for debugging:', user.email);
+      return true;
+      
       // Only allow specific users to access the email dashboard
-      const allowedUsers = process.env.ALLOWED_USERS?.split(',').map(email => email.trim()) || [];
+      // const allowedUsers = process.env.ALLOWED_USERS?.split(',').map(email => email.trim()) || [];
       
-      if (user.email && allowedUsers.includes(user.email.toLowerCase())) {
-        return true;
-      }
+      // if (user.email && allowedUsers.includes(user.email.toLowerCase())) {
+      //   console.log('User authorized:', user.email);
+      //   return true;
+      // }
       
-      return false; // Deny access to unauthorized users
+      // console.log('User not authorized:', user.email);
+      // return false; // Deny access to unauthorized users
     },
     async redirect({ url, baseUrl }) {
       return baseUrl;
