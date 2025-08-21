@@ -22,6 +22,21 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // Debug environment variables
+  console.log('Environment variables check:', {
+    BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN ? 'SET' : 'NOT SET',
+    NODE_ENV: process.env.NODE_ENV,
+    availableEnvVars: Object.keys(process.env).filter(key => key.includes('BLOB'))
+  });
+
+  // Check if blob token is available
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    console.error('BLOB_READ_WRITE_TOKEN not found in environment variables');
+    return res.status(500).json({ 
+      error: 'Blob storage not configured. Please set up BLOB_READ_WRITE_TOKEN environment variable.' 
+    });
+  }
+
   try {
     const form = formidable({
       keepExtensions: true,
