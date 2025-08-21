@@ -5,19 +5,20 @@ import { filterDataByUser, canAccessAllData } from '../utils/permissions'
 
 const COLORS = ['#059669', '#0d9488', '#0891b2', '#0284c7', '#2563eb', '#7c3aed', '#db2777', '#dc2626']
 
-export default function EnhancedEmailAnalytics({ file }) {
+export default function EnhancedEmailAnalytics({ files }) {
   const { data: session } = useSession()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('heatmap')
   const [timeFilter, setTimeFilter] = useState('all')
+  const [emailDirectionFilter, setEmailDirectionFilter] = useState('both') // 'sent', 'received', 'both'
 
   useEffect(() => {
-    if (file) {
-      loadAndParseCSV()
+    if (files && files.length > 0) {
+      loadAndParseAllCSVs()
     }
-  }, [file])
+  }, [files])
 
   const getDateRange = (filter) => {
     const now = new Date()
@@ -69,19 +70,67 @@ export default function EnhancedEmailAnalytics({ file }) {
     })
   }
 
-  const loadAndParseCSV = async () => {
+  const filterDataByEmailDirection = (rows, filter, userEmail = null) => {
+    if (filter === 'both') return rows
+    
+    if (!userEmail && session?.user?.email) {
+      userEmail = session.user.email
+    }
+    
+    if (!userEmail) return rows // Can't filter without knowing user's email
+    
+    return rows.filter(row => {
+      const sender = row['sender_address']
+      const recipient = row['recipient_address'] || row['recipients'] || ''
+      
+      if (filter === 'sent') {
+        return sender && sender.toLowerCase().includes(userEmail.toLowerCase())
+      } else if (filter === 'received') {
+        return recipient && recipient.toLowerCase().includes(userEmail.toLowerCase())
+      }
+      
+      return true
+    })
+  }
+
+  const applyAllFilters = (rows, timeFilter, emailDirectionFilter) => {
+    let filteredRows = filterDataByDateRange(rows, timeFilter)
+    filteredRows = filterDataByEmailDirection(filteredRows, emailDirectionFilter)
+    return filteredRows
+  }
+
+  const loadAndParseAllCSVs = async () => {
     setLoading(true)
     setError(null)
 
     try {
-      const response = await fetch(file.path)
-      if (!response.ok) {
-        throw new Error('Failed to load CSV file')
+      // Load all CSV files
+      const allParsedData = []
+      const loadPromises = files.map(async (file) => {
+        try {
+          const response = await fetch(file.path)
+          if (!response.ok) {
+            throw new Error(`Failed to load ${file.name}`)
+          }
+          const csvText = await response.text()
+          const parsedData = parseEmailCSV(csvText, file.name)
+          return parsedData
+        } catch (err) {
+          console.error(`Error loading ${file.name}:`, err.message)
+          return null
+        }
+      })
+
+      const results = await Promise.all(loadPromises)
+      const validResults = results.filter(result => result !== null)
+
+      if (validResults.length === 0) {
+        throw new Error('No valid CSV files could be loaded')
       }
 
-      const csvText = await response.text()
-      const parsedData = parseEmailCSV(csvText)
-      setData(parsedData)
+      // Merge all data together
+      const mergedData = mergeMultipleCSVData(validResults)
+      setData(mergedData)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -89,7 +138,38 @@ export default function EnhancedEmailAnalytics({ file }) {
     }
   }
 
-  const parseEmailCSV = (csvText) => {
+  const mergeMultipleCSVData = (parsedDataArray) => {
+    if (parsedDataArray.length === 0) return null
+    if (parsedDataArray.length === 1) return parsedDataArray[0]
+
+    // Combine all headers (union of all headers)
+    const allHeaders = new Set()
+    parsedDataArray.forEach(data => {
+      data.headers.forEach(header => allHeaders.add(header))
+    })
+    const mergedHeaders = Array.from(allHeaders)
+
+    // Combine all rows
+    const allRows = []
+    const allUnfilteredRows = []
+    
+    parsedDataArray.forEach(data => {
+      allRows.push(...data.rows)
+      allUnfilteredRows.push(...data.allRows)
+    })
+
+    return {
+      headers: mergedHeaders,
+      rows: allRows,
+      allRows: allUnfilteredRows,
+      isFiltered: parsedDataArray[0].isFiltered,
+      userRole: parsedDataArray[0].userRole,
+      fileCount: parsedDataArray.length,
+      totalRecords: allRows.length
+    }
+  }
+
+  const parseEmailCSV = (csvText, fileName = 'unknown') => {
     const lines = csvText.split('\n').filter(line => line.trim())
     if (lines.length === 0) return null
 
@@ -116,6 +196,8 @@ export default function EnhancedEmailAnalytics({ file }) {
       headers.forEach((header, index) => {
         row[header] = values[index] || ''
       })
+      // Add source file information
+      row._source_file = fileName
       return row
     })
 
@@ -127,12 +209,13 @@ export default function EnhancedEmailAnalytics({ file }) {
       rows: filteredRows,
       allRows: rows,
       isFiltered: !canAccessAllData(session),
-      userRole: session?.user?.role || 'user'
+      userRole: session?.user?.role || 'user',
+      sourceFile: fileName
     }
   }
 
-  const generateHeatmapData = (rows, filter = 'all') => {
-    const filteredRows = filterDataByDateRange(rows, filter)
+  const generateHeatmapData = (rows, timeFilter = 'all', emailDirectionFilter = 'both') => {
+    const filteredRows = applyAllFilters(rows, timeFilter, emailDirectionFilter)
     const heatmap = Array(7).fill(null).map(() => Array(24).fill(0))
     const employeeStats = {}
 
@@ -199,8 +282,8 @@ export default function EnhancedEmailAnalytics({ file }) {
     return comparisonData
   }
 
-  const getEmployeeBreakdown = (rows, filter = 'all') => {
-    const filteredRows = filterDataByDateRange(rows, filter)
+  const getEmployeeBreakdown = (rows, timeFilter = 'all', emailDirectionFilter = 'both') => {
+    const filteredRows = applyAllFilters(rows, timeFilter, emailDirectionFilter)
     const breakdown = {}
     
     filteredRows.forEach(row => {
@@ -239,9 +322,9 @@ export default function EnhancedEmailAnalytics({ file }) {
     )
   }
 
-  const heatmapData = generateHeatmapData(data.rows, timeFilter)
+  const heatmapData = generateHeatmapData(data.rows, timeFilter, emailDirectionFilter)
   const yearComparison = generateYearComparison(data.allRows)
-  const employeeBreakdown = getEmployeeBreakdown(data.rows, timeFilter)
+  const employeeBreakdown = getEmployeeBreakdown(data.rows, timeFilter, emailDirectionFilter)
 
   const tabs = [
     { id: 'heatmap', label: 'Activity Heatmap' },
@@ -260,6 +343,12 @@ export default function EnhancedEmailAnalytics({ file }) {
     { id: 'last-year', label: 'Last Year' }
   ]
 
+  const emailDirectionFilters = [
+    { id: 'both', label: 'All Emails' },
+    { id: 'sent', label: 'Sent Only' },
+    { id: 'received', label: 'Received Only' }
+  ]
+
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   const maxHeatmapValue = Math.max(...heatmapData.heatmap.flat())
 
@@ -272,6 +361,11 @@ export default function EnhancedEmailAnalytics({ file }) {
             <span className="text-sm text-gray-700">
               Viewing as: <span className="font-medium text-gray-800">{data.userRole}</span>
             </span>
+            {data.fileCount && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-gray-800 border">
+                {data.fileCount} file{data.fileCount !== 1 ? 's' : ''} merged
+              </span>
+            )}
             {data.isFiltered && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-gray-800 border">
                 Filtered to your data only
@@ -289,21 +383,47 @@ export default function EnhancedEmailAnalytics({ file }) {
         </div>
       )}
 
-      {/* Time Filter Buttons */}
-      <div className="flex flex-wrap gap-2 p-4 bg-white rounded-lg border border-emerald-100">
-        {timeFilters.map((filter) => (
-          <button
-            key={filter.id}
-            onClick={() => setTimeFilter(filter.id)}
-            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              timeFilter === filter.id
-                ? 'bg-emerald-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'
-            }`}
-          >
-            {filter.label}
-          </button>
-        ))}
+      {/* Filter Controls */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Time Filter Buttons */}
+        <div className="bg-white rounded-lg border border-emerald-100 p-4">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Time Period</h3>
+          <div className="flex flex-wrap gap-2">
+            {timeFilters.map((filter) => (
+              <button
+                key={filter.id}
+                onClick={() => setTimeFilter(filter.id)}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  timeFilter === filter.id
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Email Direction Filter */}
+        <div className="bg-white rounded-lg border border-emerald-100 p-4">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Email Direction</h3>
+          <div className="flex flex-wrap gap-2">
+            {emailDirectionFilters.map((filter) => (
+              <button
+                key={filter.id}
+                onClick={() => setEmailDirectionFilter(filter.id)}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  emailDirectionFilter === filter.id
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
       
       {/* Tab Navigation */}

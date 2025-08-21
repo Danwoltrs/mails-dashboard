@@ -43,12 +43,8 @@ export default async function handler(req, res) {
 
     form.parse(req, (err, fields, files) => {
       if (err) {
-        console.error('Form parsing error:', err);
         return res.status(500).json({ error: 'Failed to parse form data' });
       }
-
-      console.log('Files received:', Object.keys(files));
-      console.log('Fields received:', Object.keys(fields));
       
       let file = files.csvFile;
       // Handle both single file and array of files
@@ -57,16 +53,8 @@ export default async function handler(req, res) {
       }
       
       if (!file) {
-        console.error('No csvFile found. Available files:', Object.keys(files));
         return res.status(400).json({ error: 'No file uploaded' });
       }
-
-      console.log('File details:', {
-        name: file.originalFilename || file.name,
-        size: file.size,
-        path: file.filepath || file.path,
-        keys: Object.keys(file)
-      });
 
       // Validate file type
       const filename = file.originalFilename || file.name;
@@ -87,7 +75,6 @@ export default async function handler(req, res) {
       });
     });
   } catch (error) {
-    console.error('Upload error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 }

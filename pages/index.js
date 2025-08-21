@@ -8,10 +8,11 @@ import AdminModal from '../components/AdminModal'
 export default function Dashboard() {
   const { data: session, status } = useSession()
   const [csvFiles, setCsvFiles] = useState([])
-  const [selectedFile, setSelectedFile] = useState(null)
+  const [selectedFiles, setSelectedFiles] = useState([]) // Changed from selectedFile to selectedFiles (array)
   const [loading, setLoading] = useState(false)
   const [showAdminModal, setShowAdminModal] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [analyticsMode, setAnalyticsMode] = useState('all') // 'all' or 'selected'
 
   useEffect(() => {
     if (session) {
@@ -40,6 +41,9 @@ export default function Dashboard() {
       if (response.ok) {
         const data = await response.json()
         setCsvFiles(data.files)
+        // Auto-select all files for analytics
+        setSelectedFiles(data.files)
+        setAnalyticsMode('all')
       }
     } catch (error) {
       console.error('Error loading CSV files:', error)
@@ -48,8 +52,58 @@ export default function Dashboard() {
     }
   }
 
+  const handleFileToggle = (file) => {
+    setSelectedFiles(prev => {
+      const isSelected = prev.some(f => f.name === file.name)
+      let newSelection
+      if (isSelected) {
+        newSelection = prev.filter(f => f.name !== file.name)
+      } else {
+        newSelection = [...prev, file]
+      }
+      
+      // Update analytics mode based on selection
+      if (newSelection.length === csvFiles.length) {
+        setAnalyticsMode('all')
+      } else {
+        setAnalyticsMode('selected')
+      }
+      
+      return newSelection
+    })
+  }
+
+  const selectAllFiles = () => {
+    setSelectedFiles(csvFiles)
+    setAnalyticsMode('all')
+  }
+
+  const deselectAllFiles = () => {
+    setSelectedFiles([])
+    setAnalyticsMode('selected')
+  }
+
   const handleFileUploaded = () => {
     loadCsvFiles() // Refresh file list after upload
+  }
+
+  const formatDateRange = (dateRange) => {
+    if (!dateRange || !dateRange.earliest || !dateRange.latest) {
+      return 'No date info'
+    }
+    
+    const earliest = new Date(dateRange.earliest)
+    const latest = new Date(dateRange.latest)
+    const formatOptions = { year: 'numeric', month: 'short' }
+    
+    const earliestStr = earliest.toLocaleDateString('en-US', formatOptions)
+    const latestStr = latest.toLocaleDateString('en-US', formatOptions)
+    
+    if (earliestStr === latestStr) {
+      return earliestStr
+    }
+    
+    return `${earliestStr} - ${latestStr}`
   }
 
   if (status === "loading") {
@@ -180,7 +234,26 @@ export default function Dashboard() {
 
               {/* File List */}
               <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
-                <h2 className="text-lg font-semibold text-emerald-800 mb-4 border-b border-emerald-100 pb-2">Available Files</h2>
+                <div className="flex justify-between items-center mb-4 border-b border-emerald-100 pb-2">
+                  <h2 className="text-lg font-semibold text-emerald-800">Available Files</h2>
+                  {csvFiles.length > 0 && (
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={selectAllFiles}
+                        className="text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700"
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={deselectAllFiles}
+                        className="text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-700"
+                      >
+                        None
+                      </button>
+                    </div>
+                  )}
+                </div>
+                
                 {loading ? (
                   <div className="text-center py-4">
                     <div className="text-gray-600">Loading files...</div>
@@ -190,26 +263,63 @@ export default function Dashboard() {
                     No CSV files uploaded yet.
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {csvFiles.map((file) => (
-                      <div
-                        key={file.name}
-                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                          selectedFile?.name === file.name
-                            ? 'border-emerald-500 bg-emerald-50'
-                            : 'border-gray-200 hover:border-emerald-200'
-                        }`}
-                        onClick={() => setSelectedFile(file)}
-                      >
-                        <div className="font-medium text-sm text-gray-900 truncate">
-                          {file.name}
-                        </div>
+                  <>
+                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                      <div className="text-sm text-gray-700">
+                        <div className="font-medium">Selected: {selectedFiles.length} of {csvFiles.length} files</div>
                         <div className="text-xs text-gray-500 mt-1">
-                          {new Date(file.modified).toLocaleDateString()} • {Math.round(file.size / 1024)} KB
+                          {analyticsMode === 'all' ? 'Showing all files' : 'Showing selected files only'}
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {csvFiles.map((file) => {
+                        const isSelected = selectedFiles.some(f => f.name === file.name)
+                        return (
+                          <div
+                            key={file.name}
+                            className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                              isSelected
+                                ? 'border-emerald-500 bg-emerald-50'
+                                : 'border-gray-200 hover:border-emerald-200'
+                            }`}
+                            onClick={() => handleFileToggle(file)}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm text-gray-900 truncate">
+                                  {file.name}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Uploaded: {new Date(file.modified).toLocaleDateString()}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Size: {Math.round(file.size / 1024)} KB • Records: {file.recordCount || 0}
+                                </div>
+                                <div className="text-xs text-emerald-600 font-medium mt-1">
+                                  {formatDateRange(file.dateRange)}
+                                </div>
+                              </div>
+                              <div className="ml-2">
+                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                                  isSelected 
+                                    ? 'border-emerald-500 bg-emerald-500' 
+                                    : 'border-gray-300'
+                                }`}>
+                                  {isSelected && (
+                                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -217,12 +327,23 @@ export default function Dashboard() {
             {/* Right Column - Analytics */}
             <div className="lg:col-span-3">
               <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
-                <h2 className="text-lg font-semibold text-emerald-800 mb-4 border-b border-emerald-100 pb-2">Email Analytics</h2>
-                {selectedFile ? (
-                  <EnhancedEmailAnalytics file={selectedFile} />
+                <h2 className="text-lg font-semibold text-emerald-800 mb-4 border-b border-emerald-100 pb-2">
+                  Email Analytics
+                  {selectedFiles.length > 0 && (
+                    <span className="ml-2 text-sm font-normal text-gray-600">
+                      ({selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''})
+                    </span>
+                  )}
+                </h2>
+                {selectedFiles.length > 0 ? (
+                  <EnhancedEmailAnalytics files={selectedFiles} />
+                ) : csvFiles.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    Upload CSV files to view email analytics
+                  </div>
                 ) : (
                   <div className="text-center py-12 text-gray-500">
-                    Select a CSV file from the list to view analytics
+                    Select at least one CSV file to view analytics
                   </div>
                 )}
               </div>
