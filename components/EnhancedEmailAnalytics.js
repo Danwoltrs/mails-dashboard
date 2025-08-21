@@ -13,6 +13,7 @@ export default function EnhancedEmailAnalytics({ files }) {
   const [activeTab, setActiveTab] = useState('heatmap')
   const [timeFilter, setTimeFilter] = useState('all')
   const [emailDirectionFilter, setEmailDirectionFilter] = useState('both') // 'sent', 'received', 'both'
+  const [selectedUsers, setSelectedUsers] = useState([]) // For user comparison
 
   useEffect(() => {
     if (files && files.length > 0) {
@@ -235,6 +236,7 @@ export default function EnhancedEmailAnalytics({ files }) {
     const filteredRows = applyAllFilters(rows, timeFilter, emailDirectionFilter)
     const heatmap = Array(7).fill(null).map(() => Array(24).fill(0))
     const employeeStats = {}
+    const userHeatmaps = {}
 
     console.log('Processing', filteredRows.length, 'rows for heatmap');
     let processedCount = 0;
@@ -254,9 +256,17 @@ export default function EnhancedEmailAnalytics({ files }) {
             console.log('Processing email:', { timestamp, sender, day, hour, isValidDate: !isNaN(date.getTime()) });
           }
           
+          // Combined heatmap
           heatmap[day][hour]++
           processedCount++;
           
+          // Individual user heatmaps
+          if (!userHeatmaps[sender]) {
+            userHeatmaps[sender] = Array(7).fill(null).map(() => Array(24).fill(0))
+          }
+          userHeatmaps[sender][day][hour]++
+          
+          // Employee stats
           if (!employeeStats[sender]) {
             employeeStats[sender] = { total: 0, byDay: Array(7).fill(0), byHour: Array(24).fill(0) }
           }
@@ -272,10 +282,11 @@ export default function EnhancedEmailAnalytics({ files }) {
     console.log('Heatmap processing complete:', { 
       totalRows: filteredRows.length, 
       processedCount, 
-      heatmapTotal: heatmap.flat().reduce((sum, val) => sum + val, 0)
+      heatmapTotal: heatmap.flat().reduce((sum, val) => sum + val, 0),
+      userCount: Object.keys(userHeatmaps).length
     });
 
-    return { heatmap, employeeStats, totalEmails: filteredRows.length }
+    return { heatmap, employeeStats, userHeatmaps, totalEmails: filteredRows.length }
   }
 
   const generateYearComparison = (rows) => {
@@ -314,6 +325,20 @@ export default function EnhancedEmailAnalytics({ files }) {
     return comparisonData
   }
 
+  const toggleUserSelection = (userEmail) => {
+    setSelectedUsers(prev => {
+      if (prev.includes(userEmail)) {
+        return prev.filter(email => email !== userEmail)
+      } else {
+        return [...prev, userEmail]
+      }
+    })
+  }
+
+  const clearUserSelection = () => {
+    setSelectedUsers([])
+  }
+
   const getEmployeeBreakdown = (rows, timeFilter = 'all', emailDirectionFilter = 'both') => {
     const filteredRows = applyAllFilters(rows, timeFilter, emailDirectionFilter)
     const breakdown = {}
@@ -327,7 +352,12 @@ export default function EnhancedEmailAnalytics({ files }) {
 
     return Object.entries(breakdown)
       .sort(([,a], [,b]) => b - a)
-      .map(([email, count]) => ({ email, count }))
+      .map(([email, count]) => ({ 
+        email, 
+        count, 
+        name: email.split('@')[0],
+        isSelected: selectedUsers.includes(email)
+      }))
   }
 
   if (loading) {
@@ -481,47 +511,63 @@ export default function EnhancedEmailAnalytics({ files }) {
       {activeTab === 'heatmap' && (
         <div className="space-y-6">
           <div className="bg-white rounded-lg border border-emerald-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Email Activity Heatmap</h3>
-            <p className="text-sm text-gray-600 mb-6">Email volume by day of week and hour of day</p>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Individual User Activity Heatmaps</h3>
+            <p className="text-sm text-gray-600 mb-6">Email volume by day of week and hour of day for each user</p>
             
-            <div className="overflow-x-auto">
-              <div className="inline-flex flex-col gap-1"  style={{ minWidth: '800px' }}>
-                {/* Header with hours */}
-                <div className="flex">
-                  <div className="w-12 text-xs text-gray-500 text-center py-1"></div>
-                  {Array.from({length: 24}, (_, hour) => (
-                    <div key={hour} className="w-8 text-xs text-gray-500 text-center py-1">
-                      {hour.toString().padStart(2, '0')}
-                    </div>
-                  ))}
-                </div>
+            {/* Individual User Heatmaps */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {Object.entries(heatmapData.userHeatmaps).map(([user, userHeatmap]) => {
+                const userMaxValue = Math.max(...userHeatmap.flat())
+                if (userMaxValue === 0) return null // Skip users with no emails
                 
-                {/* Heatmap rows */}
-                {dayNames.map((day, dayIndex) => (
-                  <div key={day} className="flex">
-                    <div className="w-12 text-xs text-gray-700 font-medium py-2 pr-2 text-right flex items-center justify-end">
-                      {day}
-                    </div>
-                    {Array.from({length: 24}, (_, hour) => {
-                      const value = heatmapData.heatmap[dayIndex][hour]
-                      const intensity = maxHeatmapValue > 0 ? value / maxHeatmapValue : 0
-                      return (
-                        <div
-                          key={`${dayIndex}-${hour}`}
-                          className="w-8 h-8 rounded border border-gray-200 flex items-center justify-center text-xs font-medium"
-                          style={{
-                            backgroundColor: `rgba(5, 150, 105, ${intensity * 0.8 + 0.1})`,
-                            color: intensity > 0.5 ? 'white' : '#374151'
-                          }}
-                          title={`${day} ${hour}:00 - ${value} emails`}
-                        >
-                          {value > 0 ? value : ''}
+                return (
+                  <div key={user} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <h4 className="text-md font-medium text-gray-800 mb-3">
+                      {user.split('@')[0]} ({userHeatmap.flat().reduce((sum, val) => sum + val, 0)} emails)
+                    </h4>
+                    
+                    <div className="overflow-x-auto">
+                      <div className="inline-flex flex-col gap-1" style={{ minWidth: '420px' }}>
+                        {/* Header with days - horizontal */}
+                        <div className="flex">
+                          <div className="w-8 text-xs text-gray-500 text-center py-1"></div>
+                          {dayNames.map((day) => (
+                            <div key={day} className="w-12 text-xs text-gray-700 font-medium text-center py-1">
+                              {day}
+                            </div>
+                          ))}
                         </div>
-                      )
-                    })}
+                        
+                        {/* Heatmap rows - hours vertical */}
+                        {Array.from({length: 24}, (_, hour) => (
+                          <div key={hour} className="flex">
+                            <div className="w-8 text-xs text-gray-700 font-medium py-1 pr-1 text-right flex items-center justify-end">
+                              {hour.toString().padStart(2, '0')}
+                            </div>
+                            {dayNames.map((day, dayIndex) => {
+                              const value = userHeatmap[dayIndex][hour]
+                              const intensity = userMaxValue > 0 ? value / userMaxValue : 0
+                              return (
+                                <div
+                                  key={`${user}-${dayIndex}-${hour}`}
+                                  className="w-12 h-6 rounded border border-gray-200 flex items-center justify-center text-xs font-medium"
+                                  style={{
+                                    backgroundColor: `rgba(5, 150, 105, ${intensity * 0.8 + 0.1})`,
+                                    color: intensity > 0.5 ? 'white' : '#374151'
+                                  }}
+                                  title={`${user} - ${day} ${hour}:00 - ${value} emails`}
+                                >
+                                  {value > 0 ? value : ''}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
+                )
+              })}
             </div>
           </div>
 
@@ -556,22 +602,68 @@ export default function EnhancedEmailAnalytics({ files }) {
       {/* Employee Stats Tab */}
       {activeTab === 'employees' && (
         <div className="space-y-6">
+          {/* User Selection Controls */}
+          {selectedUsers.length > 0 && (
+            <div className="bg-blue-50 rounded-lg border border-blue-200 p-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h4 className="text-sm font-medium text-blue-800">
+                    Selected Users ({selectedUsers.length})
+                  </h4>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedUsers.map(email => (
+                      <span key={email} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {email.split('@')[0]}
+                        <button
+                          onClick={() => toggleUserSelection(email)}
+                          className="ml-1 text-blue-600 hover:text-blue-800"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  onClick={clearUserSelection}
+                  className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-lg border border-emerald-100 p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Employee Email Activity</h3>
             <div className="h-96">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={employeeBreakdown.slice(0, 10)}>
+                <BarChart 
+                  data={employeeBreakdown.slice(0, 15)} 
+                  margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis 
-                    dataKey="email" 
+                    dataKey="name" 
                     angle={-45} 
                     textAnchor="end" 
-                    height={80}
-                    tick={{fontSize: 12}}
+                    height={120}
+                    tick={{fontSize: 11}}
+                    interval={0}
                   />
                   <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#059669" />
+                  <Tooltip 
+                    formatter={(value, name) => [value, 'Emails']}
+                    labelFormatter={(label) => {
+                      const employee = employeeBreakdown.find(emp => emp.name === label)
+                      return employee ? employee.email : label
+                    }}
+                  />
+                  <Bar dataKey="count">
+                    {employeeBreakdown.slice(0, 15).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.isSelected ? "#dc2626" : "#059669"} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -588,7 +680,7 @@ export default function EnhancedEmailAnalytics({ files }) {
                     cy="50%"
                     outerRadius={80}
                     dataKey="count"
-                    label={({email, count}) => `${email.split('@')[0]}: ${count}`}
+                    label={({name, count}) => `${name}: ${count}`}
                   >
                     {employeeBreakdown.slice(0, 8).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -599,6 +691,72 @@ export default function EnhancedEmailAnalytics({ files }) {
               </ResponsiveContainer>
             </div>
           </div>
+
+          {/* Individual User Comparison Heatmaps */}
+          {selectedUsers.length > 0 && (
+            <div className="bg-white rounded-lg border border-emerald-100 p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Selected Users Comparison ({selectedUsers.length} users)
+              </h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {selectedUsers.map(userEmail => {
+                  const userHeatmap = heatmapData.userHeatmaps[userEmail]
+                  if (!userHeatmap) return null
+                  
+                  const userMaxValue = Math.max(...userHeatmap.flat())
+                  if (userMaxValue === 0) return null
+                  
+                  return (
+                    <div key={userEmail} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <h4 className="text-md font-medium text-gray-800 mb-3">
+                        {userEmail.split('@')[0]} ({userHeatmap.flat().reduce((sum, val) => sum + val, 0)} emails)
+                      </h4>
+                      
+                      <div className="overflow-x-auto">
+                        <div className="inline-flex flex-col gap-1" style={{ minWidth: '420px' }}>
+                          {/* Header with days - horizontal */}
+                          <div className="flex">
+                            <div className="w-8 text-xs text-gray-500 text-center py-1"></div>
+                            {dayNames.map((day) => (
+                              <div key={day} className="w-12 text-xs text-gray-700 font-medium text-center py-1">
+                                {day}
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* Heatmap rows - hours vertical */}
+                          {Array.from({length: 24}, (_, hour) => (
+                            <div key={hour} className="flex">
+                              <div className="w-8 text-xs text-gray-700 font-medium py-1 pr-1 text-right flex items-center justify-end">
+                                {hour.toString().padStart(2, '0')}
+                              </div>
+                              {dayNames.map((day, dayIndex) => {
+                                const value = userHeatmap[dayIndex][hour]
+                                const intensity = userMaxValue > 0 ? value / userMaxValue : 0
+                                return (
+                                  <div
+                                    key={`${userEmail}-${dayIndex}-${hour}`}
+                                    className="w-12 h-6 rounded border border-gray-200 flex items-center justify-center text-xs font-medium"
+                                    style={{
+                                      backgroundColor: `rgba(5, 150, 105, ${intensity * 0.8 + 0.1})`,
+                                      color: intensity > 0.5 ? 'white' : '#374151'
+                                    }}
+                                    title={`${userEmail} - ${day} ${hour}:00 - ${value} emails`}
+                                  >
+                                    {value > 0 ? value : ''}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -706,7 +864,15 @@ export default function EnhancedEmailAnalytics({ files }) {
 
           {/* Top Employees Table */}
           <div className="bg-white rounded-lg border border-emerald-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Top Email Senders</h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Top Email Senders</h3>
+              {selectedUsers.length > 0 && (
+                <div className="text-sm text-blue-600">
+                  {selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''} selected
+                </div>
+              )}
+            </div>
+            <p className="text-sm text-gray-600 mb-4">Click on employees to select/deselect them for comparison</p>
             <div className="overflow-x-auto">
               <table className="min-w-full">
                 <thead>
@@ -714,15 +880,43 @@ export default function EnhancedEmailAnalytics({ files }) {
                     <th className="text-left py-3 px-4 font-medium text-gray-700">Employee</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-700">Email Count</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-700">% of Total</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {employeeBreakdown.slice(0, 10).map((employee, index) => (
-                    <tr key={employee.email} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 text-gray-800">{employee.email}</td>
+                  {employeeBreakdown.slice(0, 15).map((employee, index) => (
+                    <tr 
+                      key={employee.email} 
+                      className={`border-b border-gray-100 cursor-pointer transition-colors ${
+                        employee.isSelected 
+                          ? 'bg-blue-50 hover:bg-blue-100' 
+                          : 'hover:bg-gray-50'
+                      }`}
+                      onClick={() => toggleUserSelection(employee.email)}
+                    >
+                      <td className="py-3 px-4">
+                        <div className="flex items-center">
+                          <div className={`w-3 h-3 rounded-full mr-3 ${
+                            employee.isSelected ? 'bg-blue-500' : 'bg-gray-300'
+                          }`}></div>
+                          <div>
+                            <div className="font-medium text-gray-800">{employee.name}</div>
+                            <div className="text-xs text-gray-500">{employee.email}</div>
+                          </div>
+                        </div>
+                      </td>
                       <td className="py-3 px-4 text-gray-600">{employee.count}</td>
                       <td className="py-3 px-4 text-gray-600">
                         {((employee.count / heatmapData.totalEmails) * 100).toFixed(1)}%
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          employee.isSelected 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {employee.isSelected ? 'Selected' : 'Click to select'}
+                        </span>
                       </td>
                     </tr>
                   ))}

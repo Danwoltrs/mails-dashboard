@@ -110,6 +110,30 @@ export default function Dashboard() {
     }
   }
 
+  const handleDelete = async (filename) => {
+    if (!confirm(`Are you sure you want to delete ${filename}? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/delete-csv?filename=${encodeURIComponent(filename)}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        // Refresh file list after successful deletion
+        loadCsvFiles()
+        alert('File deleted successfully')
+      } else {
+        const data = await response.json()
+        alert(`Failed to delete file: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('Delete error:', error)
+      alert('Failed to delete file')
+    }
+  }
+
   const formatDateRange = (dateRange) => {
     if (!dateRange || !dateRange.earliest || !dateRange.latest) {
       return 'No date info'
@@ -323,7 +347,7 @@ export default function Dashboard() {
                                 <div className="text-xs text-emerald-600 font-medium mt-1">
                                   {formatDateRange(file.dateRange)}
                                 </div>
-                                <div className="mt-2">
+                                <div className="mt-2 flex space-x-2">
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation()
@@ -332,6 +356,15 @@ export default function Dashboard() {
                                     className="text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700 transition-colors"
                                   >
                                     Download
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleDelete(file.name)
+                                    }}
+                                    className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors"
+                                  >
+                                    Delete
                                   </button>
                                 </div>
                               </div>
