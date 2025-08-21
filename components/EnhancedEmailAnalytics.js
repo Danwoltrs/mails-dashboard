@@ -58,7 +58,7 @@ export default function EnhancedEmailAnalytics({ files }) {
     if (!range) return rows
 
     return rows.filter(row => {
-      const timestamp = row['origin_timestamp_utc']
+      const timestamp = row['date_time_utc'] || row['origin_timestamp_utc']
       if (!timestamp) return false
       
       try {
@@ -80,7 +80,7 @@ export default function EnhancedEmailAnalytics({ files }) {
     if (!userEmail) return rows // Can't filter without knowing user's email
     
     return rows.filter(row => {
-      const sender = row['sender_address']
+      const sender = row['sender_address'] || row['message_subject']
       const recipient = row['recipient_address'] || row['recipients'] || ''
       
       if (filter === 'sent') {
@@ -104,6 +104,7 @@ export default function EnhancedEmailAnalytics({ files }) {
     setError(null)
 
     try {
+      console.log('Loading CSV files:', files.length);
       // Load all CSV files
       const allParsedData = []
       const loadPromises = files.map(async (file) => {
@@ -174,6 +175,8 @@ export default function EnhancedEmailAnalytics({ files }) {
     if (lines.length === 0) return null
 
     const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
+    console.log('CSV Headers for', fileName, ':', headers);
+    
     const rows = lines.slice(1).map(line => {
       const values = []
       let current = ''
@@ -204,6 +207,9 @@ export default function EnhancedEmailAnalytics({ files }) {
     // Apply user-based filtering
     const filteredRows = filterDataByUser(rows, session)
     
+    console.log('Sample parsed data for', fileName, ':', filteredRows.slice(0, 2));
+    console.log('Total rows parsed:', filteredRows.length);
+    
     return {
       headers,
       rows: filteredRows,
@@ -220,8 +226,8 @@ export default function EnhancedEmailAnalytics({ files }) {
     const employeeStats = {}
 
     filteredRows.forEach(row => {
-      const timestamp = row['origin_timestamp_utc']
-      const sender = row['sender_address']
+      const timestamp = row['date_time_utc'] || row['origin_timestamp_utc']
+      const sender = row['sender_address'] || row['message_subject']
       
       if (timestamp && sender) {
         try {
@@ -254,7 +260,7 @@ export default function EnhancedEmailAnalytics({ files }) {
     const lastYearData = {}
     
     rows.forEach(row => {
-      const timestamp = row['origin_timestamp_utc']
+      const timestamp = row['date_time_utc'] || row['origin_timestamp_utc']
       if (!timestamp) return
       
       try {
@@ -287,7 +293,7 @@ export default function EnhancedEmailAnalytics({ files }) {
     const breakdown = {}
     
     filteredRows.forEach(row => {
-      const sender = row['sender_address']
+      const sender = row['sender_address'] || row['message_subject']
       if (sender) {
         breakdown[sender] = (breakdown[sender] || 0) + 1
       }

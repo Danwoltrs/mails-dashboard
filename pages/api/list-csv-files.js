@@ -17,7 +17,8 @@ const extractDateRangeFromCSV = async (blobUrl) => {
     const timestampIndex = headers.findIndex(header => 
       header.toLowerCase().includes('timestamp') || 
       header.toLowerCase().includes('date') ||
-      header.toLowerCase().includes('time')
+      header.toLowerCase().includes('time') ||
+      header.toLowerCase() === 'date_time_utc'
     );
     
     if (timestampIndex === -1) return null;
