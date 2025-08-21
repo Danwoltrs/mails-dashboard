@@ -18,7 +18,7 @@ export const authOptions = {
       tenantId: process.env.AZURE_AD_TENANT_ID,
     })
   ],
-  debug: true,
+  // debug: true,
   callbacks: {
     async signIn({ user, account, profile }) {
       console.log('SignIn callback:', { 
