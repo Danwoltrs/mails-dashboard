@@ -18,10 +18,6 @@ export const authOptions = {
       tenantId: process.env.AZURE_AD_TENANT_ID,
     })
   ],
-  // pages: {
-  //   signIn: '/auth/signin',
-  //   error: '/auth/error',
-  // },
   // debug: true,
   callbacks: {
     async signIn({ user, account, profile }) {

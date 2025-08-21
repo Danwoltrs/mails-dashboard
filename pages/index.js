@@ -57,12 +57,17 @@ export default function Dashboard() {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Email Analytics</h1>
               <p className="text-gray-600">Wolthers & Associates</p>
             </div>
-            <button
-              onClick={() => signIn('azure-ad')}
-              className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition duration-200 font-semibold"
-            >
-              Sign in with Microsoft
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={() => signIn('azure-ad')}
+                className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition duration-200 font-semibold"
+              >
+                Sign in with Microsoft
+              </button>
+              <p className="text-xs text-gray-500 text-center">
+                Or try: <a href="/api/auth/signin/azure-ad" className="text-blue-600 hover:underline">Direct Azure AD Sign-in</a>
+              </p>
+            </div>
           </div>
         </div>
       </>
