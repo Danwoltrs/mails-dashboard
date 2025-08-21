@@ -516,7 +516,7 @@ export default function EnhancedEmailAnalytics({ files }) {
             
             {/* Individual User Heatmaps - Compact Layout */}
             <div className="overflow-x-auto">
-              <div className="inline-flex flex-col gap-4" style={{ minWidth: '1200px' }}>
+              <div className="inline-flex flex-col gap-2" style={{ minWidth: '1200px' }}>
                 {/* Global hour labels */}
                 <div className="flex">
                   <div className="w-8"></div>
@@ -572,8 +572,8 @@ export default function EnhancedEmailAnalytics({ files }) {
                 
                 {/* Heatmap rows - hours vertical */}
                 {Array.from({length: 24}, (_, hour) => (
-                  <div key={hour} className="flex mb-0.5">
-                    <div className="w-8 text-xs text-gray-700 font-medium py-0.5 pr-1 text-right flex items-center justify-end">
+                  <div key={hour} className="flex">
+                    <div className="w-8 text-xs text-gray-700 font-medium py-0 pr-1 text-right flex items-center justify-end leading-tight">
                       {hour.toString().padStart(2, '0')}
                     </div>
                     {Object.entries(heatmapData.userHeatmaps).map(([user, userHeatmap]) => {
@@ -590,11 +590,12 @@ export default function EnhancedEmailAnalytics({ files }) {
                               return (
                                 <div
                                   key={`${user}-${dayIndex}-${hour}`}
-                                  className="w-10 h-5 border border-gray-200 flex items-center justify-center text-xs font-medium"
+                                  className="w-10 h-4 border border-gray-200 flex items-center justify-center text-xs font-medium"
                                   style={{
                                     backgroundColor: `rgba(5, 150, 105, ${intensity * 0.8 + 0.1})`,
                                     color: intensity > 0.5 ? 'white' : '#374151',
-                                    borderRadius: '1px'
+                                    borderRadius: '1px',
+                                    lineHeight: '1'
                                   }}
                                   title={`${user} - ${day} ${hour}:00 - ${value} emails`}
                                 >
