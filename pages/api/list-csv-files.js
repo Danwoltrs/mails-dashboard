@@ -85,21 +85,38 @@ export default async function handler(req, res) {
   try {
     const mailsDir = path.join(process.cwd(), 'public', 'mails');
     
+    console.log('Checking directory:', mailsDir);
+    console.log('Directory exists:', fs.existsSync(mailsDir));
+    
     // Create directory if it doesn't exist
     if (!fs.existsSync(mailsDir)) {
+      console.log('Creating directory:', mailsDir);
       fs.mkdirSync(mailsDir, { recursive: true });
       return res.status(200).json({ files: [] });
     }
 
+    // Read all files in directory
+    const allFiles = fs.readdirSync(mailsDir);
+    console.log('All files in directory:', allFiles);
+    
+    // Filter CSV files
+    const csvFiles = allFiles.filter(file => file.endsWith('.csv'));
+    console.log('CSV files found:', csvFiles);
+
     // Read all CSV files from the directory
-    const files = fs.readdirSync(mailsDir)
-      .filter(file => file.endsWith('.csv'))
-      .map(file => {
+    const files = csvFiles.map(file => {
+      try {
         const filePath = path.join(mailsDir, file);
         const stats = fs.statSync(filePath);
         
-        // Extract date range and record count from CSV
-        const csvAnalysis = extractDateRangeFromCSV(filePath);
+        // Extract date range and record count from CSV (with error handling)
+        let csvAnalysis = null;
+        try {
+          csvAnalysis = extractDateRangeFromCSV(filePath);
+        } catch (csvError) {
+          console.log('CSV analysis error for', file, ':', csvError.message);
+          csvAnalysis = { recordCount: 0, dateRange: null };
+        }
         
         return {
           name: file,
@@ -109,11 +126,18 @@ export default async function handler(req, res) {
           recordCount: csvAnalysis?.recordCount || 0,
           dateRange: csvAnalysis?.dateRange || null
         };
-      })
-      .sort((a, b) => new Date(b.modified) - new Date(a.modified)); // Sort by newest first
+      } catch (fileError) {
+        console.log('File processing error for', file, ':', fileError.message);
+        return null;
+      }
+    })
+    .filter(Boolean) // Remove null entries
+    .sort((a, b) => new Date(b.modified) - new Date(a.modified)); // Sort by newest first
 
+    console.log('Final files array:', files.length, 'files');
     res.status(200).json({ files });
   } catch (error) {
+    console.error('List CSV files error:', error);
     res.status(500).json({ error: 'Failed to list CSV files' });
   }
 }
