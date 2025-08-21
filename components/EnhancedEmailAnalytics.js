@@ -861,42 +861,122 @@ export default function EnhancedEmailAnalytics({ files }) {
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white rounded-lg border border-emerald-100 p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Daily Distribution</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Daily Distribution
+                {selectedUsers.length > 0 && (
+                  <span className="text-sm font-normal text-gray-600 ml-2">
+                    ({selectedUsers.length} selected users)
+                  </span>
+                )}
+              </h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dayNames.map((day, index) => ({
-                    day,
-                    emails: heatmapData.heatmap[index].reduce((a, b) => a + b, 0)
-                  }))}>
+                  <BarChart data={(() => {
+                    if (selectedUsers.length === 0) {
+                      // Show combined data when no users selected
+                      return dayNames.map((day, index) => ({
+                        day,
+                        emails: heatmapData.heatmap[index].reduce((a, b) => a + b, 0)
+                      }))
+                    } else {
+                      // Show individual user data when users are selected
+                      return dayNames.map((day, dayIndex) => {
+                        const dayData = { day }
+                        selectedUsers.forEach((userEmail, userIndex) => {
+                          const userHeatmap = heatmapData.userHeatmaps[userEmail]
+                          if (userHeatmap) {
+                            const userName = userEmail.split('@')[0]
+                            dayData[userName] = userHeatmap[dayIndex].reduce((a, b) => a + b, 0)
+                          }
+                        })
+                        return dayData
+                      })
+                    }
+                  })()}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="day" />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="emails" fill="#059669" />
+                    {selectedUsers.length === 0 ? (
+                      <Bar dataKey="emails" fill="#059669" />
+                    ) : (
+                      selectedUsers.map((userEmail, index) => {
+                        const userName = userEmail.split('@')[0]
+                        return (
+                          <Bar 
+                            key={userEmail}
+                            dataKey={userName} 
+                            fill={COLORS[index % COLORS.length]} 
+                          />
+                        )
+                      })
+                    )}
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
             <div className="bg-white rounded-lg border border-emerald-100 p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Hourly Distribution</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Hourly Distribution
+                {selectedUsers.length > 0 && (
+                  <span className="text-sm font-normal text-gray-600 ml-2">
+                    ({selectedUsers.length} selected users)
+                  </span>
+                )}
+              </h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={Array.from({length: 24}, (_, hour) => ({
-                    hour: hour.toString().padStart(2, '0') + ':00',
-                    emails: heatmapData.heatmap.reduce((sum, day) => sum + day[hour], 0)
-                  }))}>
+                  <LineChart data={(() => {
+                    if (selectedUsers.length === 0) {
+                      // Show combined data when no users selected
+                      return Array.from({length: 24}, (_, hour) => ({
+                        hour: hour.toString().padStart(2, '0') + ':00',
+                        emails: heatmapData.heatmap.reduce((sum, day) => sum + day[hour], 0)
+                      }))
+                    } else {
+                      // Show individual user data when users are selected
+                      return Array.from({length: 24}, (_, hour) => {
+                        const hourData = {
+                          hour: hour.toString().padStart(2, '0') + ':00'
+                        }
+                        selectedUsers.forEach((userEmail) => {
+                          const userHeatmap = heatmapData.userHeatmaps[userEmail]
+                          if (userHeatmap) {
+                            const userName = userEmail.split('@')[0]
+                            hourData[userName] = userHeatmap.reduce((sum, day) => sum + day[hour], 0)
+                          }
+                        })
+                        return hourData
+                      })
+                    }
+                  })()}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="hour" />
                     <YAxis />
                     <Tooltip />
-                    <Area 
-                      type="monotone" 
-                      dataKey="emails" 
-                      stroke="#059669" 
-                      fill="rgba(5, 150, 105, 0.6)"
-                    />
-                  </AreaChart>
+                    {selectedUsers.length === 0 ? (
+                      <Line 
+                        type="monotone" 
+                        dataKey="emails" 
+                        stroke="#059669" 
+                        strokeWidth={3}
+                      />
+                    ) : (
+                      selectedUsers.map((userEmail, index) => {
+                        const userName = userEmail.split('@')[0]
+                        return (
+                          <Line 
+                            key={userEmail}
+                            type="monotone" 
+                            dataKey={userName} 
+                            stroke={COLORS[index % COLORS.length]} 
+                            strokeWidth={3}
+                          />
+                        )
+                      })
+                    )}
+                  </LineChart>
                 </ResponsiveContainer>
               </div>
             </div>
