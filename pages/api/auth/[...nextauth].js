@@ -39,8 +39,8 @@ export const authOptions = {
       });
       
       try {
-        // Hardcode daniel@wolthers.com as admin, others from env var
-        const hardcodedAdmins = ['daniel@wolthers.com'];
+        // Hardcode admin users
+        const hardcodedAdmins = ['daniel@wolthers.com', 'rasmus@wolthers.com'];
         const envAdmins = process.env.ALLOWED_USERS?.split(',').map(email => email.trim().toLowerCase()) || [];
         const allAdmins = [...hardcodedAdmins, ...envAdmins];
         

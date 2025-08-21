@@ -3,7 +3,7 @@ export function canAccessAllData(session) {
 }
 
 export function isAdminUser(email) {
-  const hardcodedAdmins = ['daniel@wolthers.com'];
+  const hardcodedAdmins = ['daniel@wolthers.com', 'rasmus@wolthers.com'];
   const envAdmins = process.env.ALLOWED_USERS?.split(',').map(email => email.trim().toLowerCase()) || [];
   const allAdmins = [...hardcodedAdmins, ...envAdmins];
   return email && allAdmins.includes(email.toLowerCase());

@@ -50,6 +50,11 @@ export default function AdminPanel() {
                 <span className="text-sm text-green-800 font-medium">daniel@wolthers.com</span>
                 <span className="ml-2 text-xs text-green-600">(hardcoded admin)</span>
               </div>
+              <div className="flex items-center">
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+                <span className="text-sm text-green-800 font-medium">rasmus@wolthers.com</span>
+                <span className="ml-2 text-xs text-green-600">(hardcoded admin)</span>
+              </div>
               {process.env.ALLOWED_USERS?.split(',').map(email => email.trim()).filter(email => email).map(email => (
                 <div key={email} className="flex items-center">
                   <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
