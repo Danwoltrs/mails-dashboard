@@ -1,5 +1,5 @@
 import NextAuth from 'next-auth'
-import AzureADProvider from "next-auth/providers/azure-ad"
+import MicrosoftProvider from "next-auth/providers/microsoft"
 
 // Debug environment variables - commented out
 // console.log('NextAuth Environment Variables:', {
@@ -12,7 +12,7 @@ import AzureADProvider from "next-auth/providers/azure-ad"
 
 export const authOptions = {
   providers: [
-    AzureADProvider({
+    MicrosoftProvider({
       clientId: process.env.AZURE_AD_CLIENT_ID,
       clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
       tenantId: process.env.AZURE_AD_TENANT_ID,

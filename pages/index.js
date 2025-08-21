@@ -59,13 +59,13 @@ export default function Dashboard() {
             </div>
             <div className="space-y-3">
               <button
-                onClick={() => signIn('azure-ad')}
+                onClick={() => signIn('microsoft')}
                 className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition duration-200 font-semibold"
               >
                 Sign in with Microsoft
               </button>
               <p className="text-xs text-gray-500 text-center">
-                Or try: <a href="/api/auth/signin/azure-ad" className="text-blue-600 hover:underline">Direct Azure AD Sign-in</a>
+                Or try: <a href="/api/auth/signin/microsoft" className="text-blue-600 hover:underline">Direct Microsoft Sign-in</a>
               </p>
             </div>
           </div>
