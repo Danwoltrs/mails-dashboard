@@ -22,11 +22,12 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  // Debug environment variables
-  console.log('Environment variables check:', {
+  // Debug environment variables (forced redeploy)
+  console.log('Environment variables check (v2):', {
     BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN ? 'SET' : 'NOT SET',
     NODE_ENV: process.env.NODE_ENV,
-    availableEnvVars: Object.keys(process.env).filter(key => key.includes('BLOB'))
+    availableEnvVars: Object.keys(process.env).filter(key => key.includes('BLOB')),
+    allEnvKeys: Object.keys(process.env).length
   });
 
   // Check if blob token is available
