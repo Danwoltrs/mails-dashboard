@@ -87,6 +87,29 @@ export default function Dashboard() {
     loadCsvFiles() // Refresh file list after upload
   }
 
+  const handleDownload = async (filename) => {
+    try {
+      const response = await fetch(`/api/download-csv?filename=${encodeURIComponent(filename)}`)
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.style.display = 'none'
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else {
+        alert('Failed to download file')
+      }
+    } catch (error) {
+      console.error('Download error:', error)
+      alert('Failed to download file')
+    }
+  }
+
   const formatDateRange = (dateRange) => {
     if (!dateRange || !dateRange.earliest || !dateRange.latest) {
       return 'No date info'
@@ -299,6 +322,17 @@ export default function Dashboard() {
                                 </div>
                                 <div className="text-xs text-emerald-600 font-medium mt-1">
                                   {formatDateRange(file.dateRange)}
+                                </div>
+                                <div className="mt-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleDownload(file.name)
+                                    }}
+                                    className="text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700 transition-colors"
+                                  >
+                                    Download
+                                  </button>
                                 </div>
                               </div>
                               <div className="ml-2">

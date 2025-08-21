@@ -1,6 +1,7 @@
 import formidable from 'formidable';
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "./auth/[...nextauth]"
+import { put } from '@vercel/blob';
 import fs from 'fs';
 import path from 'path';
 
@@ -22,26 +23,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Ensure upload directory exists - use absolute path
-    const uploadDir = path.join(process.cwd(), 'public', 'mails');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
     const form = formidable({
-      uploadDir: uploadDir,
       keepExtensions: true,
       maxFileSize: 10 * 1024 * 1024, // 10MB limit
-      filename: (name, ext, part) => {
-        // Keep original filename but ensure it's unique
-        const timestamp = Date.now();
-        const originalName = part.originalFilename || 'upload';
-        const nameWithoutExt = path.parse(originalName).name;
-        return `${nameWithoutExt}_${timestamp}.csv`;
-      },
     });
 
-    form.parse(req, (err, fields, files) => {
+    form.parse(req, async (err, fields, files) => {
       if (err) {
         return res.status(500).json({ error: 'Failed to parse form data' });
       }
@@ -57,24 +44,46 @@ export default async function handler(req, res) {
       }
 
       // Validate file type
-      const filename = file.originalFilename || file.name;
-      const filepath = file.filepath || file.path;
+      const originalFilename = file.originalFilename || file.name;
       
-      if (!filename?.endsWith('.csv')) {
-        // Remove uploaded file if it's not CSV
-        if (filepath && fs.existsSync(filepath)) {
-          fs.unlinkSync(filepath);
-        }
+      if (!originalFilename?.endsWith('.csv')) {
         return res.status(400).json({ error: 'Only CSV files are allowed' });
       }
 
-      res.status(200).json({ 
-        success: true, 
-        filename: path.basename(filepath),
-        message: 'File uploaded successfully' 
-      });
+      try {
+        // Generate unique filename
+        const timestamp = Date.now();
+        const nameWithoutExt = path.parse(originalFilename).name;
+        const uniqueFilename = `${nameWithoutExt}_${timestamp}.csv`;
+        
+        // Read file content
+        const filepath = file.filepath || file.path;
+        const fileBuffer = fs.readFileSync(filepath);
+        
+        // Upload to Vercel Blob Storage
+        const blob = await put(`mails/${uniqueFilename}`, fileBuffer, {
+          access: 'public',
+          contentType: 'text/csv',
+        });
+        
+        // Clean up temporary file
+        if (fs.existsSync(filepath)) {
+          fs.unlinkSync(filepath);
+        }
+
+        res.status(200).json({ 
+          success: true, 
+          filename: uniqueFilename,
+          url: blob.url,
+          message: 'File uploaded successfully' 
+        });
+      } catch (uploadError) {
+        console.error('Blob upload error:', uploadError);
+        res.status(500).json({ error: 'Failed to upload file to storage' });
+      }
     });
   } catch (error) {
+    console.error('Upload handler error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 }

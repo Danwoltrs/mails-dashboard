@@ -1,14 +1,13 @@
 {
-  "builds": [
-    {
-      "src": "next.config.js",
-      "use": "@vercel/next"
+  "functions": {
+    "pages/api/upload-csv.js": {
+      "maxDuration": 300
+    },
+    "pages/api/list-csv-files.js": {
+      "maxDuration": 120
+    },
+    "pages/api/download-csv.js": {
+      "maxDuration": 120
     }
-  ],
-  "routes": [
-    {
-      "src": "/mails/(.*)",
-      "dest": "/public/mails/$1"
-    }
-  ]
+  }
 }

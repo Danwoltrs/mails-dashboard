@@ -108,7 +108,7 @@ export default function EnhancedEmailAnalytics({ files }) {
       const allParsedData = []
       const loadPromises = files.map(async (file) => {
         try {
-          const response = await fetch(file.path)
+          const response = await fetch(file.url)
           if (!response.ok) {
             throw new Error(`Failed to load ${file.name}`)
           }

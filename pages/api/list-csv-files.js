@@ -1,12 +1,14 @@
-import fs from 'fs';
-import path from 'path';
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "./auth/[...nextauth]"
+import { list } from '@vercel/blob';
 
-// Helper function to parse CSV and extract date range
-const extractDateRangeFromCSV = (filePath) => {
+// Helper function to parse CSV and extract date range from blob URL
+const extractDateRangeFromCSV = async (blobUrl) => {
   try {
-    const csvContent = fs.readFileSync(filePath, 'utf8');
+    const response = await fetch(blobUrl);
+    if (!response.ok) throw new Error('Failed to fetch blob content');
+    
+    const csvContent = await response.text();
     const lines = csvContent.split('\n').filter(line => line.trim());
     
     if (lines.length < 2) return null;
@@ -67,6 +69,7 @@ const extractDateRangeFromCSV = (filePath) => {
       }
     };
   } catch (error) {
+    console.error('CSV analysis error:', error);
     return null;
   }
 };
@@ -83,59 +86,56 @@ export default async function handler(req, res) {
   }
 
   try {
-    const mailsDir = path.join(process.cwd(), 'public', 'mails');
+    // List all blobs in the 'mails/' folder
+    const { blobs } = await list({
+      prefix: 'mails/',
+      limit: 1000, // Adjust limit as needed
+    });
     
-    console.log('Checking directory:', mailsDir);
-    console.log('Directory exists:', fs.existsSync(mailsDir));
-    
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(mailsDir)) {
-      console.log('Creating directory:', mailsDir);
-      fs.mkdirSync(mailsDir, { recursive: true });
-      return res.status(200).json({ files: [] });
-    }
+    console.log('Blobs found:', blobs.length);
 
-    // Read all files in directory
-    const allFiles = fs.readdirSync(mailsDir);
-    console.log('All files in directory:', allFiles);
-    
-    // Filter CSV files
-    const csvFiles = allFiles.filter(file => file.endsWith('.csv'));
-    console.log('CSV files found:', csvFiles);
+    // Filter CSV files and process them
+    const csvBlobs = blobs.filter(blob => blob.pathname.endsWith('.csv'));
+    console.log('CSV blobs found:', csvBlobs.length);
 
-    // Read all CSV files from the directory
-    const files = csvFiles.map(file => {
-      try {
-        const filePath = path.join(mailsDir, file);
-        const stats = fs.statSync(filePath);
-        
-        // Extract date range and record count from CSV (with error handling)
-        let csvAnalysis = null;
+    // Process each CSV file to get analysis data
+    const files = await Promise.all(
+      csvBlobs.map(async (blob) => {
         try {
-          csvAnalysis = extractDateRangeFromCSV(filePath);
-        } catch (csvError) {
-          console.log('CSV analysis error for', file, ':', csvError.message);
-          csvAnalysis = { recordCount: 0, dateRange: null };
+          // Extract filename from pathname (remove 'mails/' prefix)
+          const filename = blob.pathname.replace('mails/', '');
+          
+          // Extract date range and record count from CSV (with error handling)
+          let csvAnalysis = null;
+          try {
+            csvAnalysis = await extractDateRangeFromCSV(blob.url);
+          } catch (csvError) {
+            console.log('CSV analysis error for', filename, ':', csvError.message);
+            csvAnalysis = { recordCount: 0, dateRange: null };
+          }
+          
+          return {
+            name: filename,
+            size: blob.size,
+            modified: blob.uploadedAt,
+            url: blob.url, // Direct blob URL for downloads
+            recordCount: csvAnalysis?.recordCount || 0,
+            dateRange: csvAnalysis?.dateRange || null
+          };
+        } catch (fileError) {
+          console.log('Blob processing error for', blob.pathname, ':', fileError.message);
+          return null;
         }
-        
-        return {
-          name: file,
-          size: stats.size,
-          modified: stats.mtime,
-          path: `/mails/${file}`,
-          recordCount: csvAnalysis?.recordCount || 0,
-          dateRange: csvAnalysis?.dateRange || null
-        };
-      } catch (fileError) {
-        console.log('File processing error for', file, ':', fileError.message);
-        return null;
-      }
-    })
-    .filter(Boolean) // Remove null entries
-    .sort((a, b) => new Date(b.modified) - new Date(a.modified)); // Sort by newest first
+      })
+    );
 
-    console.log('Final files array:', files.length, 'files');
-    res.status(200).json({ files });
+    // Filter out null entries and sort by newest first
+    const validFiles = files
+      .filter(Boolean)
+      .sort((a, b) => new Date(b.modified) - new Date(a.modified));
+
+    console.log('Final files array:', validFiles.length, 'files');
+    res.status(200).json({ files: validFiles });
   } catch (error) {
     console.error('List CSV files error:', error);
     res.status(500).json({ error: 'Failed to list CSV files' });

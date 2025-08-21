@@ -23,7 +23,7 @@ export default function EmailAnalytics({ file }) {
     setError(null)
 
     try {
-      const response = await fetch(file.path)
+      const response = await fetch(file.url)
       if (!response.ok) {
         throw new Error('Failed to load CSV file')
       }
