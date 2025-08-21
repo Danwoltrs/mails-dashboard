@@ -33,9 +33,12 @@ export const authOptions = {
       return baseUrl;
     },
     async session({ session, token }) {
-      // Add user role to session based on admin users list
-      const adminUsers = process.env.ALLOWED_USERS?.split(',').map(email => email.trim().toLowerCase()) || [];
-      session.user.isAdmin = session.user.email && adminUsers.includes(session.user.email.toLowerCase());
+      // Hardcode daniel@wolthers.com as admin, others from env var
+      const hardcodedAdmins = ['daniel@wolthers.com'];
+      const envAdmins = process.env.ALLOWED_USERS?.split(',').map(email => email.trim().toLowerCase()) || [];
+      const allAdmins = [...hardcodedAdmins, ...envAdmins];
+      
+      session.user.isAdmin = session.user.email && allAdmins.includes(session.user.email.toLowerCase());
       session.user.role = session.user.isAdmin ? 'admin' : 'user';
       return session;
     },

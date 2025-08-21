@@ -2,6 +2,13 @@ export function canAccessAllData(session) {
   return session?.user?.isAdmin === true;
 }
 
+export function isAdminUser(email) {
+  const hardcodedAdmins = ['daniel@wolthers.com'];
+  const envAdmins = process.env.ALLOWED_USERS?.split(',').map(email => email.trim().toLowerCase()) || [];
+  const allAdmins = [...hardcodedAdmins, ...envAdmins];
+  return email && allAdmins.includes(email.toLowerCase());
+}
+
 export function getUserEmailDomain(session) {
   if (!session?.user?.email) return null;
   return session.user.email.split('@')[1];
