@@ -241,9 +241,9 @@ export default function EnhancedEmailAnalytics({ files }) {
     
     filteredRows.forEach((row, index) => {
       const timestamp = row['date_time_utc'] || row['origin_timestamp_utc']
-      const sender = row['sender_address']
+      const sender = row['sender_address'] || 'Unknown'
       
-      if (timestamp && sender) {
+      if (timestamp) {
         try {
           const date = new Date(timestamp)
           const day = date.getDay() // 0 = Sunday, 6 = Saturday
