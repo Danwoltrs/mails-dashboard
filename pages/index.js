@@ -2,7 +2,7 @@ import { useSession, signIn, signOut } from "next-auth/react"
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import CsvUpload from '../components/CsvUpload'
-import EmailAnalytics from '../components/EmailAnalytics'
+import EnhancedEmailAnalytics from '../components/EnhancedEmailAnalytics'
 import AdminModal from '../components/AdminModal'
 
 export default function Dashboard() {
@@ -181,7 +181,7 @@ export default function Dashboard() {
               <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
                 <h2 className="text-lg font-semibold text-emerald-800 mb-4 border-b border-emerald-100 pb-2">Email Analytics</h2>
                 {selectedFile ? (
-                  <EmailAnalytics file={selectedFile} />
+                  <EnhancedEmailAnalytics file={selectedFile} />
                 ) : (
                   <div className="text-center py-12 text-gray-500">
                     Select a CSV file from the list to view analytics

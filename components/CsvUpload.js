@@ -73,8 +73,8 @@ export default function CsvUpload({ onFileUploaded }) {
       <div
         className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
           dragActive
-            ? 'border-blue-500 bg-blue-50'
-            : 'border-gray-300 hover:border-gray-400'
+            ? 'border-emerald-500 bg-emerald-50'
+            : 'border-gray-300 hover:border-emerald-300'
         }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -91,8 +91,8 @@ export default function CsvUpload({ onFileUploaded }) {
         
         {uploading ? (
           <div className="space-y-2">
-            <div className="text-blue-600 text-2xl">📤</div>
-            <div className="text-sm text-blue-600">Uploading...</div>
+            <div className="text-emerald-600 text-2xl">📤</div>
+            <div className="text-sm text-emerald-600">Uploading...</div>
           </div>
         ) : (
           <div className="space-y-2">
@@ -118,7 +118,7 @@ export default function CsvUpload({ onFileUploaded }) {
           className={`w-full text-center py-2 px-4 rounded-md text-sm font-medium cursor-pointer transition-colors ${
             uploading
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-green-600 text-white hover:bg-green-700'
+              : 'bg-emerald-600 text-white hover:bg-emerald-700'
           }`}
         >
           {uploading ? 'Uploading...' : 'Select CSV File'}
@@ -129,7 +129,7 @@ export default function CsvUpload({ onFileUploaded }) {
       {message && (
         <div className={`p-3 rounded-md text-sm ${
           message.includes('successfully') 
-            ? 'bg-green-50 text-green-700 border border-green-200'
+            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
             : 'bg-red-50 text-red-700 border border-red-200'
         }`}>
           {message}
