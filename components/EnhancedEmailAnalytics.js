@@ -514,43 +514,83 @@ export default function EnhancedEmailAnalytics({ files }) {
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Individual User Activity Heatmaps</h3>
             <p className="text-sm text-gray-600 mb-6">Email volume by day of week and hour of day for each user</p>
             
-            {/* Individual User Heatmaps */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {Object.entries(heatmapData.userHeatmaps).map(([user, userHeatmap]) => {
-                const userMaxValue = Math.max(...userHeatmap.flat())
-                if (userMaxValue === 0) return null // Skip users with no emails
-                
-                return (
-                  <div key={user} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <h4 className="text-md font-medium text-gray-800 mb-3">
-                      {user.split('@')[0]} ({userHeatmap.flat().reduce((sum, val) => sum + val, 0)} emails)
-                    </h4>
-                    
-                    <div className="overflow-x-auto">
-                      <div className="inline-flex flex-col gap-1" style={{ minWidth: '420px' }}>
-                        {/* Header with days - horizontal */}
+            {/* Individual User Heatmaps - Compact Layout */}
+            <div className="overflow-x-auto">
+              <div className="inline-flex flex-col gap-4" style={{ minWidth: '1200px' }}>
+                {/* Global hour labels */}
+                <div className="flex">
+                  <div className="w-8"></div>
+                  {Object.entries(heatmapData.userHeatmaps).map(([user, userHeatmap]) => {
+                    if (Math.max(...userHeatmap.flat()) === 0) return null
+                    return (
+                      <div key={user} className="mr-4">
                         <div className="flex">
-                          <div className="w-8 text-xs text-gray-500 text-center py-1"></div>
+                          <div className="w-12 text-xs text-gray-500 text-center py-1"></div>
                           {dayNames.map((day) => (
-                            <div key={day} className="w-12 text-xs text-gray-700 font-medium text-center py-1">
-                              {day}
+                            <div key={day} className="w-10 text-xs text-gray-700 font-medium text-center py-1">
+                              {day.slice(0, 1)}
                             </div>
                           ))}
                         </div>
-                        
-                        {/* Heatmap rows - hours vertical */}
-                        {Array.from({length: 24}, (_, hour) => (
-                          <div key={hour} className="flex">
-                            <div className="w-8 text-xs text-gray-700 font-medium py-1 pr-1 text-right flex items-center justify-end">
-                              {hour.toString().padStart(2, '0')}
-                            </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* User names and weekly totals */}
+                <div className="flex">
+                  <div className="w-8"></div>
+                  {Object.entries(heatmapData.userHeatmaps).map(([user, userHeatmap]) => {
+                    if (Math.max(...userHeatmap.flat()) === 0) return null
+                    const totalEmails = userHeatmap.flat().reduce((sum, val) => sum + val, 0)
+                    const weeklyTotals = dayNames.map((_, dayIndex) => 
+                      userHeatmap[dayIndex].reduce((sum, val) => sum + val, 0)
+                    )
+                    
+                    return (
+                      <div key={user} className="mr-4">
+                        <div className="mb-2">
+                          <div className="text-sm font-medium text-gray-800 text-center mb-1">
+                            {user.split('@')[0]}
+                          </div>
+                          <div className="text-xs text-gray-600 text-center">
+                            ({totalEmails} emails)
+                          </div>
+                          <div className="flex mt-1">
+                            <div className="w-12"></div>
+                            {weeklyTotals.map((total, dayIndex) => (
+                              <div key={dayIndex} className="w-10 text-xs text-blue-600 font-medium text-center">
+                                {total}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                
+                {/* Heatmap rows - hours vertical */}
+                {Array.from({length: 24}, (_, hour) => (
+                  <div key={hour} className="flex">
+                    <div className="w-8 text-xs text-gray-700 font-medium py-1 pr-1 text-right flex items-center justify-end">
+                      {hour.toString().padStart(2, '0')}
+                    </div>
+                    {Object.entries(heatmapData.userHeatmaps).map(([user, userHeatmap]) => {
+                      const userMaxValue = Math.max(...userHeatmap.flat())
+                      if (userMaxValue === 0) return null
+                      
+                      return (
+                        <div key={user} className="mr-4">
+                          <div className="flex">
+                            <div className="w-12"></div>
                             {dayNames.map((day, dayIndex) => {
                               const value = userHeatmap[dayIndex][hour]
                               const intensity = userMaxValue > 0 ? value / userMaxValue : 0
                               return (
                                 <div
                                   key={`${user}-${dayIndex}-${hour}`}
-                                  className="w-12 h-6 rounded border border-gray-200 flex items-center justify-center text-xs font-medium"
+                                  className="w-10 h-5 rounded border border-gray-200 flex items-center justify-center text-xs font-medium"
                                   style={{
                                     backgroundColor: `rgba(5, 150, 105, ${intensity * 0.8 + 0.1})`,
                                     color: intensity > 0.5 ? 'white' : '#374151'
@@ -562,12 +602,12 @@ export default function EnhancedEmailAnalytics({ files }) {
                               )
                             })}
                           </div>
-                        ))}
-                      </div>
-                    </div>
+                        </div>
+                      )
+                    })}
                   </div>
-                )
-              })}
+                ))}
+              </div>
             </div>
           </div>
 
