@@ -177,6 +177,17 @@ export default function EnhancedEmailAnalytics({ files }) {
     const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
     console.log('CSV Headers for', fileName, ':', headers);
     
+    // Validate this is an email tracking CSV
+    const requiredEmailHeaders = ['date_time_utc', 'sender_address'];
+    const hasEmailHeaders = requiredEmailHeaders.some(header => 
+      headers.some(h => h.toLowerCase().includes(header.toLowerCase()))
+    );
+    
+    if (!hasEmailHeaders) {
+      console.warn('Skipping non-email CSV file:', fileName, 'Headers:', headers);
+      return null;
+    }
+    
     const rows = lines.slice(1).map(line => {
       const values = []
       let current = ''
