@@ -236,7 +236,10 @@ export default function EnhancedEmailAnalytics({ files }) {
     const heatmap = Array(7).fill(null).map(() => Array(24).fill(0))
     const employeeStats = {}
 
-    filteredRows.forEach(row => {
+    console.log('Processing', filteredRows.length, 'rows for heatmap');
+    let processedCount = 0;
+    
+    filteredRows.forEach((row, index) => {
       const timestamp = row['date_time_utc'] || row['origin_timestamp_utc']
       const sender = row['sender_address']
       
@@ -246,7 +249,13 @@ export default function EnhancedEmailAnalytics({ files }) {
           const day = date.getDay() // 0 = Sunday, 6 = Saturday
           const hour = date.getHours()
           
+          // Only log first few for debugging
+          if (index < 5) {
+            console.log('Processing email:', { timestamp, sender, day, hour, isValidDate: !isNaN(date.getTime()) });
+          }
+          
           heatmap[day][hour]++
+          processedCount++;
           
           if (!employeeStats[sender]) {
             employeeStats[sender] = { total: 0, byDay: Array(7).fill(0), byHour: Array(24).fill(0) }
@@ -255,10 +264,16 @@ export default function EnhancedEmailAnalytics({ files }) {
           employeeStats[sender].byDay[day]++
           employeeStats[sender].byHour[hour]++
         } catch (e) {
-          // Invalid timestamp
+          console.log('Invalid timestamp:', timestamp, e);
         }
       }
     })
+
+    console.log('Heatmap processing complete:', { 
+      totalRows: filteredRows.length, 
+      processedCount, 
+      heatmapTotal: heatmap.flat().reduce((sum, val) => sum + val, 0)
+    });
 
     return { heatmap, employeeStats, totalEmails: filteredRows.length }
   }
