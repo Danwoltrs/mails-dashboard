@@ -50,30 +50,39 @@ export default async function handler(req, res) {
       console.log('Files received:', Object.keys(files));
       console.log('Fields received:', Object.keys(fields));
       
-      const file = files.csvFile;
+      let file = files.csvFile;
+      // Handle both single file and array of files
+      if (Array.isArray(file)) {
+        file = file[0];
+      }
+      
       if (!file) {
         console.error('No csvFile found. Available files:', Object.keys(files));
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
       console.log('File details:', {
-        name: file.originalFilename,
+        name: file.originalFilename || file.name,
         size: file.size,
-        path: file.filepath
+        path: file.filepath || file.path,
+        keys: Object.keys(file)
       });
 
       // Validate file type
-      if (!file.originalFilename?.endsWith('.csv')) {
+      const filename = file.originalFilename || file.name;
+      const filepath = file.filepath || file.path;
+      
+      if (!filename?.endsWith('.csv')) {
         // Remove uploaded file if it's not CSV
-        if (fs.existsSync(file.filepath)) {
-          fs.unlinkSync(file.filepath);
+        if (filepath && fs.existsSync(filepath)) {
+          fs.unlinkSync(filepath);
         }
         return res.status(400).json({ error: 'Only CSV files are allowed' });
       }
 
       res.status(200).json({ 
         success: true, 
-        filename: path.basename(file.filepath),
+        filename: path.basename(filepath),
         message: 'File uploaded successfully' 
       });
     });
