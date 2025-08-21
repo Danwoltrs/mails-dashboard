@@ -25,30 +25,18 @@ export const authOptions = {
   debug: true,
   callbacks: {
     async signIn({ user, account, profile }) {
-      console.log('NextAuth signIn callback:', { 
-        userEmail: user.email, 
-        allowedUsers: process.env.ALLOWED_USERS 
-      });
-      
-      // Temporarily allow all users for debugging
-      console.log('Allowing user for debugging:', user.email);
+      console.log('User signed in:', user.email);
+      // Allow all authenticated users - data access will be controlled at the content level
       return true;
-      
-      // Only allow specific users to access the email dashboard
-      // const allowedUsers = process.env.ALLOWED_USERS?.split(',').map(email => email.trim()) || [];
-      
-      // if (user.email && allowedUsers.includes(user.email.toLowerCase())) {
-      //   console.log('User authorized:', user.email);
-      //   return true;
-      // }
-      
-      // console.log('User not authorized:', user.email);
-      // return false; // Deny access to unauthorized users
     },
     async redirect({ url, baseUrl }) {
       return baseUrl;
     },
     async session({ session, token }) {
+      // Add user role to session based on admin users list
+      const adminUsers = process.env.ALLOWED_USERS?.split(',').map(email => email.trim().toLowerCase()) || [];
+      session.user.isAdmin = session.user.email && adminUsers.includes(session.user.email.toLowerCase());
+      session.user.role = session.user.isAdmin ? 'admin' : 'user';
       return session;
     },
     async jwt({ token, account }) {

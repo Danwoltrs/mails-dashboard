@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
+import { filterDataByUser, canAccessAllData } from '../utils/permissions'
 
 const COLORS = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#6B7280']
 
 export default function EmailAnalytics({ file }) {
+  const { data: session } = useSession()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -49,10 +52,16 @@ export default function EmailAnalytics({ file }) {
       return row
     })
 
+    // Apply user-based filtering
+    const filteredRows = filterDataByUser(rows, session)
+    
     return {
       headers,
-      rows,
-      summary: generateSummary(rows, headers)
+      rows: filteredRows,
+      allRows: rows, // Keep original for admin comparison
+      summary: generateSummary(filteredRows, headers),
+      isFiltered: !canAccessAllData(session),
+      userRole: session?.user?.role || 'user'
     }
   }
 
@@ -176,6 +185,30 @@ export default function EmailAnalytics({ file }) {
 
   return (
     <div className="space-y-6">
+      {/* User Role and Data Filter Indicator */}
+      {data && (
+        <div className="flex justify-between items-center bg-gray-50 rounded-lg p-3">
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-gray-600">
+              Viewing as: <span className="font-medium text-gray-900">{data.userRole}</span>
+            </span>
+            {data.isFiltered && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                Filtered to your data only
+              </span>
+            )}
+            {!data.isFiltered && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                Viewing all data
+              </span>
+            )}
+          </div>
+          <div className="text-sm text-gray-500">
+            {data.rows.length} of {data.allRows?.length || data.rows.length} emails
+          </div>
+        </div>
+      )}
+      
       {/* Tab Navigation */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
