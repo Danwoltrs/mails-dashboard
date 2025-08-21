@@ -22,8 +22,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Ensure upload directory exists
-    const uploadDir = './public/mails';
+    // Ensure upload directory exists - use absolute path
+    const uploadDir = path.join(process.cwd(), 'public', 'mails');
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }

@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const mailsDir = './public/mails';
+    const mailsDir = path.join(process.cwd(), 'public', 'mails');
     
     // Create directory if it doesn't exist
     if (!fs.existsSync(mailsDir)) {
