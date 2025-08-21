@@ -55,10 +55,13 @@ export default function Dashboard() {
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-emerald-100">
           <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8 border border-emerald-200">
             <div className="text-center mb-8">
-              <div className="mb-4">
-                <div className="inline-block bg-emerald-800 rounded-lg px-4 py-2">
-                  <span className="text-white font-bold text-xl">wolthers</span>
-                  <span className="text-emerald-200 text-sm ml-1">& associates</span>
+              <div className="mb-6">
+                <div className="inline-block bg-emerald-800 rounded-lg p-4">
+                  <img 
+                    src="https://wolthers.com/images/wolthers-logo-off-white.svg" 
+                    alt="Wolthers & Associates" 
+                    className="h-8 w-auto"
+                  />
                 </div>
               </div>
               <h1 className="text-2xl font-bold text-gray-900 mb-2">Email Analytics</h1>
@@ -93,10 +96,11 @@ export default function Dashboard() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
               <div className="flex items-center space-x-4">
-                <div className="bg-white rounded-lg px-3 py-1">
-                  <span className="text-emerald-800 font-bold text-lg">wolthers</span>
-                  <span className="text-emerald-600 text-sm ml-1">& associates</span>
-                </div>
+                <img 
+                  src="https://wolthers.com/images/wolthers-logo-off-white.svg" 
+                  alt="Wolthers & Associates" 
+                  className="h-8 w-auto"
+                />
                 <div className="text-white">
                   <h1 className="text-xl font-semibold">Email Analytics</h1>
                   <p className="text-emerald-200 text-sm">Staff Communication Analysis</p>
