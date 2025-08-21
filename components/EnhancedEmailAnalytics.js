@@ -572,8 +572,8 @@ export default function EnhancedEmailAnalytics({ files }) {
                 
                 {/* Heatmap rows - hours vertical */}
                 {Array.from({length: 24}, (_, hour) => (
-                  <div key={hour} className="flex">
-                    <div className="w-8 text-xs text-gray-700 font-medium py-1 pr-1 text-right flex items-center justify-end">
+                  <div key={hour} className="flex mb-0.5">
+                    <div className="w-8 text-xs text-gray-700 font-medium py-0.5 pr-1 text-right flex items-center justify-end">
                       {hour.toString().padStart(2, '0')}
                     </div>
                     {Object.entries(heatmapData.userHeatmaps).map(([user, userHeatmap]) => {
@@ -590,10 +590,11 @@ export default function EnhancedEmailAnalytics({ files }) {
                               return (
                                 <div
                                   key={`${user}-${dayIndex}-${hour}`}
-                                  className="w-10 h-5 rounded border border-gray-200 flex items-center justify-center text-xs font-medium"
+                                  className="w-10 h-5 border border-gray-200 flex items-center justify-center text-xs font-medium"
                                   style={{
                                     backgroundColor: `rgba(5, 150, 105, ${intensity * 0.8 + 0.1})`,
-                                    color: intensity > 0.5 ? 'white' : '#374151'
+                                    color: intensity > 0.5 ? 'white' : '#374151',
+                                    borderRadius: '1px'
                                   }}
                                   title={`${user} - ${day} ${hour}:00 - ${value} emails`}
                                 >
