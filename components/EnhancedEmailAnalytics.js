@@ -80,7 +80,7 @@ export default function EnhancedEmailAnalytics({ files }) {
     if (!userEmail) return rows // Can't filter without knowing user's email
     
     return rows.filter(row => {
-      const sender = row['sender_address'] || row['message_subject']
+      const sender = row['sender_address']
       const recipient = row['recipient_address'] || row['recipients'] || ''
       
       if (filter === 'sent') {
@@ -227,7 +227,7 @@ export default function EnhancedEmailAnalytics({ files }) {
 
     filteredRows.forEach(row => {
       const timestamp = row['date_time_utc'] || row['origin_timestamp_utc']
-      const sender = row['sender_address'] || row['message_subject']
+      const sender = row['sender_address']
       
       if (timestamp && sender) {
         try {
@@ -293,7 +293,7 @@ export default function EnhancedEmailAnalytics({ files }) {
     const breakdown = {}
     
     filteredRows.forEach(row => {
-      const sender = row['sender_address'] || row['message_subject']
+      const sender = row['sender_address']
       if (sender) {
         breakdown[sender] = (breakdown[sender] || 0) + 1
       }
