@@ -11,12 +11,27 @@ export default function Dashboard() {
   const [selectedFile, setSelectedFile] = useState(null)
   const [loading, setLoading] = useState(false)
   const [showAdminModal, setShowAdminModal] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
 
   useEffect(() => {
     if (session) {
       loadCsvFiles()
     }
   }, [session])
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showUserMenu && !event.target.closest('.user-menu')) {
+        setShowUserMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showUserMenu])
 
   const loadCsvFiles = async () => {
     try {
@@ -93,7 +108,7 @@ export default function Dashboard() {
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
         <header className="bg-emerald-800 shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="px-6">
             <div className="flex justify-between items-center py-4">
               <div className="flex items-center space-x-4">
                 <img 
@@ -107,31 +122,54 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex items-center space-x-3">
-                {session?.user?.isAdmin && (
+                <div className="relative user-menu">
                   <button
-                    onClick={() => setShowAdminModal(true)}
-                    className="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-2 rounded-md transition duration-200 text-sm font-medium border border-emerald-600"
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="flex items-center space-x-2 text-emerald-100 hover:text-white transition duration-200"
                   >
-                    Admin Panel
+                    <span className="text-sm">
+                      {session.user?.name || session.user?.email}
+                    </span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </button>
-                )}
-                <span className="text-emerald-100 text-sm">
-                  {session.user?.name || session.user?.email}
-                </span>
-                <button
-                  onClick={() => signOut()}
-                  className="bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-md transition duration-200 text-sm border border-emerald-600"
-                >
-                  Sign Out
-                </button>
+                  
+                  {showUserMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                      <div className="py-1">
+                        <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-100">
+                          {session.user?.email}
+                        </div>
+                        {session?.user?.isAdmin && (
+                          <button
+                            onClick={() => {
+                              setShowAdminModal(true)
+                              setShowUserMenu(false)
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700"
+                          >
+                            Admin Panel
+                          </button>
+                        )}
+                        <button
+                          onClick={() => signOut()}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700"
+                        >
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <main className="px-6 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Left Column - File Management */}
             <div className="lg:col-span-1 space-y-6">
               {/* CSV Upload */}
@@ -177,7 +215,7 @@ export default function Dashboard() {
             </div>
 
             {/* Right Column - Analytics */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-3">
               <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
                 <h2 className="text-lg font-semibold text-emerald-800 mb-4 border-b border-emerald-100 pb-2">Email Analytics</h2>
                 {selectedFile ? (
