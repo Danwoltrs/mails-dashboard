@@ -485,19 +485,21 @@ export default function EnhancedEmailAnalytics({ files }) {
             <p className="text-sm text-gray-600 mb-6">Email volume by day of week and hour of day</p>
             
             <div className="overflow-x-auto">
-              <div className="grid grid-cols-25 gap-1 min-w-full">
+              <div className="inline-flex flex-col gap-1"  style={{ minWidth: '800px' }}>
                 {/* Header with hours */}
-                <div className="text-xs text-gray-500 text-center py-1"></div>
-                {Array.from({length: 24}, (_, hour) => (
-                  <div key={hour} className="text-xs text-gray-500 text-center py-1">
-                    {hour.toString().padStart(2, '0')}
-                  </div>
-                ))}
+                <div className="flex">
+                  <div className="w-12 text-xs text-gray-500 text-center py-1"></div>
+                  {Array.from({length: 24}, (_, hour) => (
+                    <div key={hour} className="w-8 text-xs text-gray-500 text-center py-1">
+                      {hour.toString().padStart(2, '0')}
+                    </div>
+                  ))}
+                </div>
                 
                 {/* Heatmap rows */}
                 {dayNames.map((day, dayIndex) => (
-                  <React.Fragment key={day}>
-                    <div className="text-xs text-gray-700 font-medium py-2 pr-2 text-right">
+                  <div key={day} className="flex">
+                    <div className="w-12 text-xs text-gray-700 font-medium py-2 pr-2 text-right flex items-center justify-end">
                       {day}
                     </div>
                     {Array.from({length: 24}, (_, hour) => {
@@ -506,7 +508,7 @@ export default function EnhancedEmailAnalytics({ files }) {
                       return (
                         <div
                           key={`${dayIndex}-${hour}`}
-                          className="aspect-square rounded border border-gray-200 flex items-center justify-center text-xs font-medium"
+                          className="w-8 h-8 rounded border border-gray-200 flex items-center justify-center text-xs font-medium"
                           style={{
                             backgroundColor: `rgba(5, 150, 105, ${intensity * 0.8 + 0.1})`,
                             color: intensity > 0.5 ? 'white' : '#374151'
@@ -517,7 +519,7 @@ export default function EnhancedEmailAnalytics({ files }) {
                         </div>
                       )
                     })}
-                  </React.Fragment>
+                  </div>
                 ))}
               </div>
             </div>
