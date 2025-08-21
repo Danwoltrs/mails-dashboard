@@ -527,7 +527,7 @@ export default function EnhancedEmailAnalytics({ files }) {
                         <div className="flex">
                           <div className="w-12 text-xs text-gray-500 text-center py-1"></div>
                           {dayNames.map((day) => (
-                            <div key={day} className="w-8 text-xs text-gray-700 font-medium text-center py-1 mr-px">
+                            <div key={day} className="text-xs text-gray-700 font-medium text-center py-1" style={{ width: '14px', margin: '1px' }}>
                               {day.slice(0, 1)}
                             </div>
                           ))}
@@ -559,7 +559,7 @@ export default function EnhancedEmailAnalytics({ files }) {
                           <div className="flex mt-1">
                             <div className="w-12"></div>
                             {weeklyTotals.map((total, dayIndex) => (
-                              <div key={dayIndex} className="w-8 text-xs text-blue-600 font-medium text-center mr-px">
+                              <div key={dayIndex} className="text-xs text-blue-600 font-medium text-center" style={{ width: '14px', margin: '1px' }}>
                                 {total}
                               </div>
                             ))}
@@ -590,13 +590,14 @@ export default function EnhancedEmailAnalytics({ files }) {
                               return (
                                 <div
                                   key={`${user}-${dayIndex}-${hour}`}
-                                  className="w-8 h-3 flex items-center justify-center text-xs font-medium mr-px mb-px"
+                                  className="flex items-center justify-center text-xs font-medium"
                                   style={{
+                                    width: '12px',
+                                    height: '12px',
+                                    margin: '1px',
                                     backgroundColor: `rgba(5, 150, 105, ${intensity * 0.8 + 0.1})`,
                                     color: intensity > 0.5 ? 'white' : '#374151',
-                                    borderRadius: '1px',
-                                    lineHeight: '1',
-                                    fontSize: '10px'
+                                    fontSize: '8px'
                                   }}
                                   title={`${user} - ${day} ${hour}:00 - ${value} emails`}
                                 >
