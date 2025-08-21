@@ -47,10 +47,20 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Failed to parse form data' });
       }
 
+      console.log('Files received:', Object.keys(files));
+      console.log('Fields received:', Object.keys(fields));
+      
       const file = files.csvFile;
       if (!file) {
+        console.error('No csvFile found. Available files:', Object.keys(files));
         return res.status(400).json({ error: 'No file uploaded' });
       }
+
+      console.log('File details:', {
+        name: file.originalFilename,
+        size: file.size,
+        path: file.filepath
+      });
 
       // Validate file type
       if (!file.originalFilename?.endsWith('.csv')) {
