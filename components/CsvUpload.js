@@ -5,7 +5,8 @@ export default function CsvUpload({ onFileUploaded }) {
   const [dragActive, setDragActive] = useState(false)
   const [message, setMessage] = useState('')
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [selectedFile, setSelectedFile] = useState(null)
+  const [selectedFiles, setSelectedFiles] = useState([])
+  const [currentUploadIndex, setCurrentUploadIndex] = useState(0)
   
   const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB in bytes
 
@@ -17,67 +18,114 @@ export default function CsvUpload({ onFileUploaded }) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
-  const handleFileUpload = async (file) => {
-    if (!file) return
+  const handleFilesUpload = async (files) => {
+    const fileList = Array.from(files)
+    if (fileList.length === 0) return
 
-    // Validate file type
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      setMessage('Please select a CSV file.')
+    // Validate all files
+    const invalidFiles = fileList.filter(file => 
+      !file.name.toLowerCase().endsWith('.csv') || file.size > MAX_FILE_SIZE
+    )
+
+    if (invalidFiles.length > 0) {
+      const invalidFileNames = invalidFiles.map(f => f.name).join(', ')
+      setMessage(`Invalid files: ${invalidFileNames}. Please ensure all files are CSV and under ${formatFileSize(MAX_FILE_SIZE)}.`)
       return
     }
 
-    // Validate file size
-    if (file.size > MAX_FILE_SIZE) {
-      setMessage(`File size ${formatFileSize(file.size)} exceeds the maximum limit of ${formatFileSize(MAX_FILE_SIZE)}.`)
-      return
-    }
-
-    setSelectedFile(file)
+    setSelectedFiles(fileList)
     setUploading(true)
     setMessage('')
     setUploadProgress(0)
+    setCurrentUploadIndex(0)
 
-    try {
-      const formData = new FormData()
-      formData.append('csvFile', file)
+    let successCount = 0
+    let errorCount = 0
 
-      // Try XMLHttpRequest with progress tracking first
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i]
+      setCurrentUploadIndex(i)
+
       try {
-        const result = await uploadWithProgress(formData, setUploadProgress)
-        setUploadProgress(100)
-        setMessage(`File "${result.filename}" uploaded successfully!`)
-        onFileUploaded && onFileUploaded()
-      } catch (xhrError) {
-        console.warn('XMLHttpRequest failed, falling back to fetch:', xhrError)
-        
-        // Fallback to fetch without progress
-        const response = await fetch('/api/upload-csv', {
-          method: 'POST',
-          body: formData,
-        })
+        const formData = new FormData()
+        formData.append('csvFile', file)
 
-        if (response.ok) {
-          const result = await response.json()
-          setUploadProgress(100)
-          setMessage(`File "${result.filename}" uploaded successfully!`)
-          onFileUploaded && onFileUploaded()
-        } else {
-          const error = await response.json()
-          throw new Error(error.error || 'Upload failed')
+        // Update progress to show which file we're on
+        const baseProgress = (i / fileList.length) * 100
+        const progressCallback = (fileProgress) => {
+          const totalProgress = baseProgress + (fileProgress / fileList.length)
+          setUploadProgress(totalProgress)
         }
+
+        // Try XMLHttpRequest with progress tracking first
+        try {
+          const result = await uploadWithProgress(formData, progressCallback)
+          successCount++
+          console.log(`Successfully uploaded: ${result.filename}`)
+        } catch (xhrError) {
+          console.warn('XMLHttpRequest failed, falling back to fetch:', xhrError)
+          
+          // Fallback to fetch without progress
+          const response = await fetch('/api/upload-csv', {
+            method: 'POST',
+            body: formData,
+          })
+
+          if (response.ok) {
+            const result = await response.json()
+            successCount++
+            console.log(`Successfully uploaded: ${result.filename}`)
+          } else {
+            let errorMessage = `Upload failed with status ${response.status}`
+            
+            try {
+              const error = await response.json()
+              errorMessage = error.error || errorMessage
+            } catch (parseError) {
+              // Handle non-JSON error responses  
+              try {
+                const textResponse = await response.text()
+                const textContent = textResponse.replace(/<[^>]*>/g, '').trim()
+                if (textContent.length > 0 && textContent.length < 200) {
+                  errorMessage = textContent
+                } else {
+                  errorMessage = `${errorMessage}: ${response.statusText || 'Server error'}`
+                }
+              } catch (textError) {
+                errorMessage = `${errorMessage}: ${response.statusText || 'Unknown error'}`
+              }
+            }
+            
+            throw new Error(errorMessage)
+          }
+        }
+        
+      } catch (error) {
+        console.error(`Upload error for ${file.name}:`, error)
+        errorCount++
       }
-      
-    } catch (error) {
-      console.error('Upload error:', error)
-      setMessage(`Upload failed: ${error.message}`)
-      setUploadProgress(0)
-    } finally {
-      setTimeout(() => {
-        setUploading(false)
-        setUploadProgress(0)
-        setSelectedFile(null)
-      }, 2000) // Keep progress visible for 2 seconds after completion
     }
+
+    // Final results
+    setUploadProgress(100)
+    
+    if (successCount === fileList.length) {
+      setMessage(`All ${successCount} files uploaded successfully!`)
+      onFileUploaded && onFileUploaded()
+    } else if (successCount > 0) {
+      setMessage(`${successCount} files uploaded successfully, ${errorCount} failed.`)
+      onFileUploaded && onFileUploaded()
+    } else {
+      setMessage(`All ${errorCount} files failed to upload.`)
+    }
+
+    // Clean up after delay
+    setTimeout(() => {
+      setUploading(false)
+      setUploadProgress(0)
+      setSelectedFiles([])
+      setCurrentUploadIndex(0)
+    }, 3000) // Keep progress visible for 3 seconds for multiple files
   }
 
   const uploadWithProgress = (formData, onProgress) => {
@@ -110,13 +158,30 @@ export default function CsvUpload({ onFileUploaded }) {
               reject(new Error('Invalid response from server'))
             }
           } else {
+            // Handle non-JSON error responses (like HTML error pages)
+            let errorMessage = `Upload failed with status ${xhr.status}`
+            
             try {
               const errorResponse = JSON.parse(xhr.responseText || '{}')
-              reject(new Error(errorResponse.error || `HTTP ${xhr.status}: ${xhr.statusText}`))
+              errorMessage = errorResponse.error || errorMessage
             } catch (parseError) {
-              console.error('Failed to parse error response:', parseError, xhr.responseText)
-              reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.statusText || 'Unknown error'}`))
+              // If response is not JSON, try to extract meaningful error from HTML/text
+              if (xhr.responseText) {
+                const textContent = xhr.responseText.replace(/<[^>]*>/g, '').trim()
+                if (textContent.length > 0 && textContent.length < 200) {
+                  errorMessage = textContent
+                } else {
+                  errorMessage = `${errorMessage}: ${xhr.statusText || 'Server error'}`
+                }
+              }
+              console.error('Non-JSON error response:', {
+                status: xhr.status,
+                statusText: xhr.statusText,
+                responseText: xhr.responseText.substring(0, 500)
+              })
             }
+            
+            reject(new Error(errorMessage))
           }
         }
       }
@@ -153,14 +218,14 @@ export default function CsvUpload({ onFileUploaded }) {
     e.stopPropagation()
     setDragActive(false)
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileUpload(e.dataTransfer.files[0])
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFilesUpload(e.dataTransfer.files)
     }
   }
 
   const handleInputChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFileUpload(e.target.files[0])
+    if (e.target.files && e.target.files.length > 0) {
+      handleFilesUpload(e.target.files)
     }
   }
 
@@ -191,6 +256,7 @@ export default function CsvUpload({ onFileUploaded }) {
         <input
           type="file"
           accept=".csv"
+          multiple
           onChange={handleInputChange}
           disabled={uploading}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -200,8 +266,16 @@ export default function CsvUpload({ onFileUploaded }) {
           <div className="space-y-4">
             <div className="text-emerald-600 text-2xl">📤</div>
             <div className="text-sm text-emerald-600">
-              Uploading {selectedFile?.name}...
+              {selectedFiles.length > 1 
+                ? `Uploading ${currentUploadIndex + 1} of ${selectedFiles.length} files...`
+                : `Uploading ${selectedFiles[0]?.name || 'file'}...`
+              }
             </div>
+            {selectedFiles.length > 1 && (
+              <div className="text-xs text-gray-500">
+                Current: {selectedFiles[currentUploadIndex]?.name}
+              </div>
+            )}
             
             {/* Progress Bar */}
             <div className="w-full bg-gray-200 rounded-full h-3 shadow-inner">
@@ -211,11 +285,16 @@ export default function CsvUpload({ onFileUploaded }) {
               ></div>
             </div>
             
-            {/* Progress Percentage and File Size */}
+            {/* Progress Percentage and File Info */}
             <div className="flex justify-between items-center text-xs text-gray-600">
               <span>{Math.round(uploadProgress)}% complete</span>
-              {selectedFile && (
-                <span>{formatFileSize(selectedFile.size)}</span>
+              {selectedFiles.length > 0 && (
+                <span>
+                  {selectedFiles.length > 1 
+                    ? `${selectedFiles.length} files selected`
+                    : formatFileSize(selectedFiles[0]?.size || 0)
+                  }
+                </span>
               )}
             </div>
           </div>
@@ -225,7 +304,7 @@ export default function CsvUpload({ onFileUploaded }) {
             <div className="text-sm text-gray-600">
               <span className="font-semibold">Click to upload</span> or drag and drop
             </div>
-            <div className="text-xs text-gray-500">CSV files only • Max {formatFileSize(MAX_FILE_SIZE)}</div>
+            <div className="text-xs text-gray-500">CSV files only • Multiple files supported • Max {formatFileSize(MAX_FILE_SIZE)} each</div>
           </div>
         )}
       </div>
@@ -235,6 +314,7 @@ export default function CsvUpload({ onFileUploaded }) {
         <input
           type="file"
           accept=".csv"
+          multiple
           onChange={handleInputChange}
           disabled={uploading}
           className="hidden"
@@ -248,7 +328,7 @@ export default function CsvUpload({ onFileUploaded }) {
         >
           {uploading 
             ? `Uploading... ${Math.round(uploadProgress)}%` 
-            : `Select CSV File (Max ${formatFileSize(MAX_FILE_SIZE)})`
+            : `Select CSV Files (Max ${formatFileSize(MAX_FILE_SIZE)} each)`
           }
         </div>
       </label>

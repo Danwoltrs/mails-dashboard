@@ -13,6 +13,7 @@ export default function Dashboard() {
   const [showAdminModal, setShowAdminModal] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [analyticsMode, setAnalyticsMode] = useState('all') // 'all' or 'selected'
+  const [showInstructions, setShowInstructions] = useState(false) // Collapsible instructions
 
   useEffect(() => {
     if (session) {
@@ -285,39 +286,54 @@ export default function Dashboard() {
             </div>
           ) : (
             /* Admin View - Full dashboard */
-            <>
-              {/* Admin Instructions Banner */}
-              <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <div className="flex items-start space-x-3">
-                  <div className="text-blue-600 text-xl">📊</div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-blue-800 mb-2">How to Download Email Reports</h3>
-                    <div className="space-y-2 text-sm text-blue-700">
-                      <p>1. <a 
-                        href="https://admin.exchange.microsoft.com/#/messagetrace" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="font-semibold underline hover:text-blue-800"
-                      >
-                        Click here to start downloading reports
-                      </a></p>
-                      <p>2. Click on <strong>"Custom queries"</strong></p>
-                      <p>3. Click on either <strong>"Last two weeks"</strong> or <strong>"Last week"</strong></p>
-                      <p>4. Ensure <strong>"Extended report"</strong> is checked</p>
-                      <p>5. Click on <strong>"Next"</strong>, then <strong>"Save"</strong></p>
-                      <p>6. Download the generated CSV file and upload it below</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 {/* Left Column - File Management */}
                 <div className="lg:col-span-1 space-y-6">
                   {/* CSV Upload */}
                   <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
                     <h2 className="text-lg font-semibold text-emerald-800 mb-4 border-b border-emerald-100 pb-2">Upload CSV File</h2>
                     <CsvUpload onFileUploaded={handleFileUploaded} />
+                  </div>
+
+                  {/* Collapsible Instructions */}
+                  <div className="bg-white rounded-lg shadow-md border border-emerald-100">
+                    <button
+                      onClick={() => setShowInstructions(!showInstructions)}
+                      className="w-full p-6 text-left flex items-center justify-between hover:bg-gray-50 transition-colors rounded-lg"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="text-blue-600 text-xl">📊</div>
+                        <h2 className="text-lg font-semibold text-emerald-800">How to Download Reports</h2>
+                      </div>
+                      <svg 
+                        className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${showInstructions ? 'rotate-180' : ''}`}
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    
+                    {showInstructions && (
+                      <div className="px-6 pb-6 border-t border-emerald-100">
+                        <div className="pt-4 space-y-2 text-sm text-blue-700">
+                          <p>1. <a 
+                            href="https://admin.exchange.microsoft.com/#/messagetrace" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="font-semibold underline hover:text-blue-800"
+                          >
+                            Click here to start downloading reports
+                          </a></p>
+                          <p>2. Click on <strong>"Custom queries"</strong></p>
+                          <p>3. Click on either <strong>"Last two weeks"</strong> or <strong>"Last week"</strong></p>
+                          <p>4. Ensure <strong>"Extended report"</strong> is checked</p>
+                          <p>5. Click on <strong>"Next"</strong>, then <strong>"Save"</strong></p>
+                          <p>6. Download the generated CSV file and upload it above</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* File List */}
