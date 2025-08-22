@@ -8,7 +8,7 @@ export default function CsvUpload({ onFileUploaded }) {
   const [selectedFiles, setSelectedFiles] = useState([])
   const [currentUploadIndex, setCurrentUploadIndex] = useState(0)
   
-  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB in bytes
+  const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB in bytes
 
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes'

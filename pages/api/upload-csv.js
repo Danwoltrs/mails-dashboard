@@ -41,7 +41,7 @@ export default async function handler(req, res) {
   try {
     const form = formidable({
       keepExtensions: true,
-      maxFileSize: 10 * 1024 * 1024, // 10MB limit
+      maxFileSize: 5 * 1024 * 1024, // 5MB limit
     });
 
     form.parse(req, async (err, fields, files) => {
