@@ -240,6 +240,8 @@ export default function EnhancedEmailAnalytics({ files }) {
 
     console.log('Processing', filteredRows.length, 'rows for heatmap');
     let processedCount = 0;
+    let hasEarlyEmails = false; // Before 6am
+    let hasLateEmails = false; // After 10pm
     
     filteredRows.forEach((row, index) => {
       const timestamp = row['date_time_utc'] || row['origin_timestamp_utc']
@@ -250,6 +252,10 @@ export default function EnhancedEmailAnalytics({ files }) {
           const date = new Date(timestamp)
           const day = date.getDay() // 0 = Sunday, 6 = Saturday
           const hour = date.getHours()
+          
+          // Check for emails outside normal range
+          if (hour < 6) hasEarlyEmails = true;
+          if (hour > 22) hasLateEmails = true;
           
           // Only log first few for debugging
           if (index < 5) {
@@ -279,14 +285,22 @@ export default function EnhancedEmailAnalytics({ files }) {
       }
     })
 
+    // Determine hour range to display
+    const showAllHours = hasEarlyEmails || hasLateEmails;
+    const hourRange = showAllHours ? [0, 23] : [6, 22];
+
     console.log('Heatmap processing complete:', { 
       totalRows: filteredRows.length, 
       processedCount, 
       heatmapTotal: heatmap.flat().reduce((sum, val) => sum + val, 0),
-      userCount: Object.keys(userHeatmaps).length
+      userCount: Object.keys(userHeatmaps).length,
+      hasEarlyEmails,
+      hasLateEmails,
+      showAllHours,
+      hourRange
     });
 
-    return { heatmap, employeeStats, userHeatmaps, totalEmails: filteredRows.length }
+    return { heatmap, employeeStats, userHeatmaps, totalEmails: filteredRows.length, hourRange }
   }
 
   const generateYearComparison = (rows) => {
@@ -527,7 +541,7 @@ export default function EnhancedEmailAnalytics({ files }) {
                         <div className="flex">
                           <div className="w-12 text-xs text-gray-500 text-center py-1"></div>
                           {dayNames.map((day) => (
-                            <div key={day} className="text-xs text-gray-700 font-medium text-center py-1" style={{ width: '10px', margin: '1px' }}>
+                            <div key={day} className="text-xs text-gray-700 font-medium text-center py-1" style={{ width: '20px', margin: '2px' }}>
                               {day.slice(0, 1)}
                             </div>
                           ))}
@@ -559,7 +573,7 @@ export default function EnhancedEmailAnalytics({ files }) {
                           <div className="flex mt-1">
                             <div className="w-12"></div>
                             {weeklyTotals.map((total, dayIndex) => (
-                              <div key={dayIndex} className="text-xs text-blue-600 font-medium text-center" style={{ width: '10px', margin: '1px' }}>
+                              <div key={dayIndex} className="text-xs text-blue-600 font-medium text-center" style={{ width: '20px', margin: '2px' }}>
                                 {total}
                               </div>
                             ))}
@@ -571,7 +585,9 @@ export default function EnhancedEmailAnalytics({ files }) {
                 </div>
                 
                 {/* Heatmap rows - hours vertical */}
-                {Array.from({length: 24}, (_, hour) => (
+                {Array.from({length: heatmapData.hourRange[1] - heatmapData.hourRange[0] + 1}, (_, index) => {
+                  const hour = heatmapData.hourRange[0] + index;
+                  return (
                   <div key={hour} className="flex">
                     <div className="w-8 text-xs text-gray-700 font-medium py-0 pr-1 text-right flex items-center justify-end leading-tight">
                       {hour.toString().padStart(2, '0')}
@@ -592,9 +608,9 @@ export default function EnhancedEmailAnalytics({ files }) {
                                   key={`${user}-${dayIndex}-${hour}`}
                                   className="flex items-center justify-center text-xs font-medium"
                                   style={{
-                                    width: '8px',
-                                    height: '8px',
-                                    margin: '1px',
+                                    width: '20px',
+                                    height: '20px',
+                                    margin: '2px',
                                     backgroundColor: `rgba(5, 150, 105, ${intensity * 0.8 + 0.1})`,
                                     color: intensity > 0.5 ? 'white' : '#374151',
                                     fontSize: '6px'
@@ -610,7 +626,8 @@ export default function EnhancedEmailAnalytics({ files }) {
                       )
                     })}
                   </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -769,7 +786,9 @@ export default function EnhancedEmailAnalytics({ files }) {
                           </div>
                           
                           {/* Heatmap rows - hours vertical */}
-                          {Array.from({length: 24}, (_, hour) => (
+                          {Array.from({length: heatmapData.hourRange[1] - heatmapData.hourRange[0] + 1}, (_, index) => {
+                            const hour = heatmapData.hourRange[0] + index;
+                            return (
                             <div key={hour} className="flex">
                               <div className="w-8 text-xs text-gray-700 font-medium py-1 pr-1 text-right flex items-center justify-end">
                                 {hour.toString().padStart(2, '0')}
@@ -792,7 +811,8 @@ export default function EnhancedEmailAnalytics({ files }) {
                                 )
                               })}
                             </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       </div>
                     </div>
@@ -934,13 +954,17 @@ export default function EnhancedEmailAnalytics({ files }) {
                   <LineChart data={(() => {
                     if (selectedUsers.length === 0) {
                       // Show combined data when no users selected
-                      return Array.from({length: 24}, (_, hour) => ({
-                        hour: hour.toString().padStart(2, '0') + ':00',
-                        emails: heatmapData.heatmap.reduce((sum, day) => sum + day[hour], 0)
-                      }))
+                      return Array.from({length: heatmapData.hourRange[1] - heatmapData.hourRange[0] + 1}, (_, index) => {
+                        const hour = heatmapData.hourRange[0] + index;
+                        return {
+                          hour: hour.toString().padStart(2, '0') + ':00',
+                          emails: heatmapData.heatmap.reduce((sum, day) => sum + day[hour], 0)
+                        };
+                      })
                     } else {
                       // Show individual user data when users are selected
-                      return Array.from({length: 24}, (_, hour) => {
+                      return Array.from({length: heatmapData.hourRange[1] - heatmapData.hourRange[0] + 1}, (_, index) => {
+                        const hour = heatmapData.hourRange[0] + index;
                         const hourData = {
                           hour: hour.toString().padStart(2, '0') + ':00'
                         }
