@@ -41,45 +41,34 @@ export default function CsvUpload({ onFileUploaded }) {
       const formData = new FormData()
       formData.append('csvFile', file)
 
-      // Create XMLHttpRequest for progress tracking
-      const xhr = new XMLHttpRequest()
-      
-      // Set up progress tracking
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          const percentComplete = (e.loaded / e.total) * 100
-          setUploadProgress(percentComplete)
-        }
-      })
-
-      // Set up response handling
-      const uploadPromise = new Promise((resolve, reject) => {
-        xhr.onreadystatechange = () => {
-          if (xhr.readyState === 4) {
-            if (xhr.status === 200) {
-              const result = JSON.parse(xhr.responseText)
-              resolve(result)
-            } else {
-              const error = JSON.parse(xhr.responseText)
-              reject(new Error(error.error))
-            }
-          }
-        }
+      // Try XMLHttpRequest with progress tracking first
+      try {
+        const result = await uploadWithProgress(formData, setUploadProgress)
+        setUploadProgress(100)
+        setMessage(`File "${result.filename}" uploaded successfully!`)
+        onFileUploaded && onFileUploaded()
+      } catch (xhrError) {
+        console.warn('XMLHttpRequest failed, falling back to fetch:', xhrError)
         
-        xhr.onerror = () => reject(new Error('Network error'))
-      })
+        // Fallback to fetch without progress
+        const response = await fetch('/api/upload-csv', {
+          method: 'POST',
+          body: formData,
+        })
 
-      // Start the upload
-      xhr.open('POST', '/api/upload-csv')
-      xhr.send(formData)
-
-      // Wait for completion
-      const result = await uploadPromise
-      setUploadProgress(100)
-      setMessage(`File "${result.filename}" uploaded successfully!`)
-      onFileUploaded && onFileUploaded()
+        if (response.ok) {
+          const result = await response.json()
+          setUploadProgress(100)
+          setMessage(`File "${result.filename}" uploaded successfully!`)
+          onFileUploaded && onFileUploaded()
+        } else {
+          const error = await response.json()
+          throw new Error(error.error || 'Upload failed')
+        }
+      }
       
     } catch (error) {
+      console.error('Upload error:', error)
       setMessage(`Upload failed: ${error.message}`)
       setUploadProgress(0)
     } finally {
@@ -89,6 +78,64 @@ export default function CsvUpload({ onFileUploaded }) {
         setSelectedFile(null)
       }, 2000) // Keep progress visible for 2 seconds after completion
     }
+  }
+
+  const uploadWithProgress = (formData, onProgress) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      
+      // Set up progress tracking
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = (e.loaded / e.total) * 100
+          onProgress(percentComplete)
+        }
+      })
+
+      // Set up response handling
+      xhr.onreadystatechange = () => {
+        if (xhr.readyState === 4) {
+          console.log('Upload response:', {
+            status: xhr.status,
+            responseText: xhr.responseText,
+            statusText: xhr.statusText
+          })
+          
+          if (xhr.status === 200) {
+            try {
+              const result = JSON.parse(xhr.responseText)
+              resolve(result)
+            } catch (parseError) {
+              console.error('Failed to parse success response:', parseError, xhr.responseText)
+              reject(new Error('Invalid response from server'))
+            }
+          } else {
+            try {
+              const errorResponse = JSON.parse(xhr.responseText || '{}')
+              reject(new Error(errorResponse.error || `HTTP ${xhr.status}: ${xhr.statusText}`))
+            } catch (parseError) {
+              console.error('Failed to parse error response:', parseError, xhr.responseText)
+              reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.statusText || 'Unknown error'}`))
+            }
+          }
+        }
+      }
+      
+      xhr.onerror = () => {
+        console.error('Network error during upload')
+        reject(new Error('Network error'))
+      }
+      
+      xhr.ontimeout = () => {
+        console.error('Upload timeout')
+        reject(new Error('Upload timeout - file may be too large'))
+      }
+
+      // Start the upload
+      xhr.open('POST', '/api/upload-csv')
+      xhr.timeout = 300000 // 5 minutes timeout
+      xhr.send(formData)
+    })
   }
 
   const handleDrag = (e) => {
