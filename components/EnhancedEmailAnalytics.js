@@ -586,7 +586,21 @@ export default function EnhancedEmailAnalytics({ files }) {
                             <div className="text-sm text-gray-600 text-center mb-2">
                               ({totalEmails} emails)
                             </div>
-                            {/* Day labels (S M T W T F S) below username, above squares */}
+                            {/* Daily totals row - sum of all emails per weekday */}
+                            <div className="flex mb-1">
+                              {dayNames.map((day, dayIndex) => {
+                                const dailyTotal = rowUsers.reduce((sum, { userHeatmap }) => {
+                                  return sum + userHeatmap[dayIndex].reduce((daySum, hourCount) => daySum + hourCount, 0)
+                                }, 0)
+                                
+                                return (
+                                  <div key={`total-${day}`} className="text-xs font-bold text-blue-600 text-center bg-blue-50 border border-blue-200 rounded" style={{ width: '40px', margin: '2px', padding: '2px' }}>
+                                    {dailyTotal}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                            {/* Day labels (S M T W T F S) below totals, above squares */}
                             <div className="flex mb-1">
                               {dayNames.map((day) => (
                                 <div key={day} className="text-sm font-bold text-gray-700 text-center" style={{ width: '40px', margin: '2px' }}>
