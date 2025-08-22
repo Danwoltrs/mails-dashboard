@@ -270,152 +270,195 @@ export default function Dashboard() {
 
         {/* Main Content */}
         <main className="px-6 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Left Column - File Management */}
-            <div className="lg:col-span-1 space-y-6">
-              {/* CSV Upload */}
-              <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
-                <h2 className="text-lg font-semibold text-emerald-800 mb-4 border-b border-emerald-100 pb-2">Upload CSV File</h2>
-                <CsvUpload onFileUploaded={handleFileUploaded} />
+          {/* Check if user is admin */}
+          {!session?.user?.isAdmin ? (
+            /* Non-Admin View - White screen with email icon */
+            <div className="min-h-[80vh] bg-white rounded-lg shadow-md border border-gray-200 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-gray-400 mb-4">
+                  <svg className="w-32 h-32 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Admin View - Full dashboard */
+            <>
+              {/* Admin Instructions Banner */}
+              <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <div className="flex items-start space-x-3">
+                  <div className="text-blue-600 text-xl">📊</div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-blue-800 mb-2">How to Download Email Reports</h3>
+                    <div className="space-y-2 text-sm text-blue-700">
+                      <p>1. <a 
+                        href="https://admin.exchange.microsoft.com/#/messagetrace" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="font-semibold underline hover:text-blue-800"
+                      >
+                        Click here to start downloading reports
+                      </a></p>
+                      <p>2. Click on <strong>"Custom queries"</strong></p>
+                      <p>3. Click on either <strong>"Last two weeks"</strong> or <strong>"Last week"</strong></p>
+                      <p>4. Ensure <strong>"Extended report"</strong> is checked</p>
+                      <p>5. Click on <strong>"Next"</strong>, then <strong>"Save"</strong></p>
+                      <p>6. Download the generated CSV file and upload it below</p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* File List */}
-              <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
-                <div className="flex justify-between items-center mb-4 border-b border-emerald-100 pb-2">
-                  <h2 className="text-lg font-semibold text-emerald-800">Available Files</h2>
-                  {csvFiles.length > 0 && (
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={selectAllFiles}
-                        className="text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700"
-                      >
-                        All
-                      </button>
-                      <button
-                        onClick={deselectAllFiles}
-                        className="text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-700"
-                      >
-                        None
-                      </button>
-                    </div>
-                  )}
-                </div>
-                
-                {loading ? (
-                  <div className="text-center py-4">
-                    <div className="text-gray-600">Loading files...</div>
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                {/* Left Column - File Management */}
+                <div className="lg:col-span-1 space-y-6">
+                  {/* CSV Upload */}
+                  <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
+                    <h2 className="text-lg font-semibold text-emerald-800 mb-4 border-b border-emerald-100 pb-2">Upload CSV File</h2>
+                    <CsvUpload onFileUploaded={handleFileUploaded} />
                   </div>
-                ) : csvFiles.length === 0 ? (
-                  <div className="text-center py-4 text-gray-500">
-                    No CSV files uploaded yet.
-                  </div>
-                ) : (
-                  <>
-                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                      <div className="text-sm text-gray-700">
-                        <div className="font-medium">Selected: {selectedFiles.length} of {csvFiles.length} files</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {analyticsMode === 'all' ? 'Showing all files' : 'Showing selected files only'}
+
+                  {/* File List */}
+                  <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
+                    <div className="flex justify-between items-center mb-4 border-b border-emerald-100 pb-2">
+                      <h2 className="text-lg font-semibold text-emerald-800">Available Files</h2>
+                      {csvFiles.length > 0 && (
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={selectAllFiles}
+                            className="text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700"
+                          >
+                            All
+                          </button>
+                          <button
+                            onClick={deselectAllFiles}
+                            className="text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-700"
+                          >
+                            None
+                          </button>
                         </div>
-                      </div>
+                      )}
                     </div>
                     
-                    <div className="space-y-2">
-                      {csvFiles.map((file) => {
-                        const isSelected = selectedFiles.some(f => f.name === file.name)
-                        return (
-                          <div
-                            key={file.name}
-                            className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                              isSelected
-                                ? 'border-emerald-500 bg-emerald-50'
-                                : 'border-gray-200 hover:border-emerald-200'
-                            }`}
-                            onClick={() => handleFileToggle(file)}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-sm text-gray-900 truncate">
-                                  {file.name}
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                  Uploaded: {new Date(file.modified).toLocaleDateString()}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  Size: {Math.round(file.size / 1024)} KB • Records: {file.recordCount || 0}
-                                </div>
-                                <div className="text-xs text-emerald-600 font-medium mt-1">
-                                  {formatDateRange(file.dateRange)}
-                                </div>
-                                <div className="mt-2 flex space-x-2">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleDownload(file.name)
-                                    }}
-                                    className="text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700 transition-colors"
-                                  >
-                                    Download
-                                  </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleDelete(file.name)
-                                    }}
-                                    className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              </div>
-                              <div className="ml-2">
-                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-                                  isSelected 
-                                    ? 'border-emerald-500 bg-emerald-500' 
-                                    : 'border-gray-300'
-                                }`}>
-                                  {isSelected && (
-                                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                  )}
-                                </div>
-                              </div>
+                    {loading ? (
+                      <div className="text-center py-4">
+                        <div className="text-gray-600">Loading files...</div>
+                      </div>
+                    ) : csvFiles.length === 0 ? (
+                      <div className="text-center py-4 text-gray-500">
+                        No CSV files uploaded yet.
+                      </div>
+                    ) : (
+                      <>
+                        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                          <div className="text-sm text-gray-700">
+                            <div className="font-medium">Selected: {selectedFiles.length} of {csvFiles.length} files</div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {analyticsMode === 'all' ? 'Showing all files' : 'Showing selected files only'}
                             </div>
                           </div>
-                        )
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          {csvFiles.map((file) => {
+                            const isSelected = selectedFiles.some(f => f.name === file.name)
+                            return (
+                              <div
+                                key={file.name}
+                                className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                                  isSelected
+                                    ? 'border-emerald-500 bg-emerald-50'
+                                    : 'border-gray-200 hover:border-emerald-200'
+                                }`}
+                                onClick={() => handleFileToggle(file)}
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-sm text-gray-900 truncate">
+                                      {file.name}
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      Uploaded: {new Date(file.modified).toLocaleDateString()}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      Size: {Math.round(file.size / 1024)} KB • Records: {file.recordCount || 0}
+                                    </div>
+                                    <div className="text-xs text-emerald-600 font-medium mt-1">
+                                      {formatDateRange(file.dateRange)}
+                                    </div>
+                                    <div className="mt-2 flex space-x-2">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleDownload(file.name)
+                                        }}
+                                        className="text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700 transition-colors"
+                                      >
+                                        Download
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleDelete(file.name)
+                                        }}
+                                        className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors"
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="ml-2">
+                                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                                      isSelected 
+                                        ? 'border-emerald-500 bg-emerald-500' 
+                                        : 'border-gray-300'
+                                    }`}>
+                                      {isSelected && (
+                                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                        </svg>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
 
-            {/* Right Column - Analytics */}
-            <div className="lg:col-span-3">
-              <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
-                <h2 className="text-lg font-semibold text-emerald-800 mb-4 border-b border-emerald-100 pb-2">
-                  Email Analytics
-                  {selectedFiles.length > 0 && (
-                    <span className="ml-2 text-sm font-normal text-gray-600">
-                      ({selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''})
-                    </span>
-                  )}
-                </h2>
-                {selectedFiles.length > 0 ? (
-                  <EnhancedEmailAnalytics files={selectedFiles} />
-                ) : csvFiles.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    Upload CSV files to view email analytics
+                {/* Right Column - Analytics */}
+                <div className="lg:col-span-3">
+                  <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
+                    <h2 className="text-lg font-semibold text-emerald-800 mb-4 border-b border-emerald-100 pb-2">
+                      Email Analytics
+                      {selectedFiles.length > 0 && (
+                        <span className="ml-2 text-sm font-normal text-gray-600">
+                          ({selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''})
+                        </span>
+                      )}
+                    </h2>
+                    {selectedFiles.length > 0 ? (
+                      <EnhancedEmailAnalytics files={selectedFiles} />
+                    ) : csvFiles.length === 0 ? (
+                      <div className="text-center py-12 text-gray-500">
+                        Upload CSV files to view email analytics
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 text-gray-500">
+                        Select at least one CSV file to view analytics
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="text-center py-12 text-gray-500">
-                    Select at least one CSV file to view analytics
-                  </div>
-                )}
+                </div>
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </main>
 
         {/* Admin Modal */}
