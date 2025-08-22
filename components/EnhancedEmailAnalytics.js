@@ -14,12 +14,25 @@ export default function EnhancedEmailAnalytics({ files }) {
   const [timeFilter, setTimeFilter] = useState('all')
   const [emailDirectionFilter, setEmailDirectionFilter] = useState('both') // 'sent', 'received', 'both'
   const [selectedUsers, setSelectedUsers] = useState([]) // For user comparison
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1400)
 
   useEffect(() => {
     if (files && files.length > 0) {
       loadAndParseAllCSVs()
     }
   }, [files])
+
+  // Handle window resize for responsive heatmap layout
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth)
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize)
+      return () => window.removeEventListener('resize', handleResize)
+    }
+  }, [])
 
   const getDateRange = (filter) => {
     const now = new Date()
@@ -528,15 +541,29 @@ export default function EnhancedEmailAnalytics({ files }) {
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Individual User Activity Heatmaps</h3>
             <p className="text-sm text-gray-600 mb-6">Email volume by day of week and hour of day for each user</p>
             
-            {/* Individual User Heatmaps - Improved Layout */}
+            {/* Individual User Heatmaps - Flexible Responsive Layout */}
             <div className="overflow-x-auto">
               {(() => {
-                const activeUsers = Object.entries(heatmapData.userHeatmaps).filter(([_, userHeatmap]) => 
-                  Math.max(...userHeatmap.flat()) > 0
-                )
+                // Get active users and sort by total email count (highest to lowest)
+                const activeUsers = Object.entries(heatmapData.userHeatmaps)
+                  .filter(([_, userHeatmap]) => Math.max(...userHeatmap.flat()) > 0)
+                  .map(([user, userHeatmap]) => ({
+                    user,
+                    userHeatmap,
+                    totalEmails: userHeatmap.flat().reduce((sum, val) => sum + val, 0)
+                  }))
+                  .sort((a, b) => b.totalEmails - a.totalEmails)
                 
-                // Split users into rows - 4 per row for better visibility
-                const usersPerRow = 4
+                // Determine responsive columns per row based on screen width
+                const getColumnsPerRow = () => {
+                  if (windowWidth >= 1800) return 5  // Extra large screens - fit 5 columns
+                  if (windowWidth >= 1400) return 4  // Large screens - fit 4 columns
+                  if (windowWidth >= 1024) return 3  // Medium screens - fit 3 columns
+                  if (windowWidth >= 768) return 2   // Small screens - fit 2 columns
+                  return 1                           // Mobile - fit 1 column
+                }
+                
+                const usersPerRow = getColumnsPerRow()
                 const userRows = []
                 for (let i = 0; i < activeUsers.length; i += usersPerRow) {
                   userRows.push(activeUsers.slice(i, i + usersPerRow))
@@ -544,27 +571,10 @@ export default function EnhancedEmailAnalytics({ files }) {
                 
                 return userRows.map((rowUsers, rowIndex) => (
                   <div key={rowIndex} className="mb-8">
-                    {/* Day labels (S M T W T F S) on top */}
+                    {/* User names centered and capitalized */}
                     <div className="flex mb-2">
                       <div className="w-12"></div>
-                      {rowUsers.map(([user]) => (
-                        <div key={user} className="flex flex-col items-center mr-6">
-                          <div className="flex">
-                            {dayNames.map((day) => (
-                              <div key={day} className="text-sm font-bold text-gray-700 text-center" style={{ width: '40px', margin: '2px' }}>
-                                {day.slice(0, 1)}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* User names centered and capitalized */}
-                    <div className="flex mb-3">
-                      <div className="w-12"></div>
-                      {rowUsers.map(([user, userHeatmap]) => {
-                        const totalEmails = userHeatmap.flat().reduce((sum, val) => sum + val, 0)
+                      {rowUsers.map(({ user, totalEmails }) => {
                         const userName = user.split('@')[0]
                         const capitalizedName = userName.charAt(0).toUpperCase() + userName.slice(1).toLowerCase()
                         
@@ -573,8 +583,16 @@ export default function EnhancedEmailAnalytics({ files }) {
                             <div className="text-lg font-semibold text-gray-800 text-center mb-1">
                               {capitalizedName}
                             </div>
-                            <div className="text-sm text-gray-600 text-center">
+                            <div className="text-sm text-gray-600 text-center mb-2">
                               ({totalEmails} emails)
+                            </div>
+                            {/* Day labels (S M T W T F S) below username, above squares */}
+                            <div className="flex mb-1">
+                              {dayNames.map((day) => (
+                                <div key={day} className="text-sm font-bold text-gray-700 text-center" style={{ width: '40px', margin: '2px' }}>
+                                  {day.slice(0, 1)}
+                                </div>
+                              ))}
                             </div>
                           </div>
                         )
@@ -589,7 +607,7 @@ export default function EnhancedEmailAnalytics({ files }) {
                           <div className="w-12 text-sm text-gray-700 font-medium pr-2 text-right flex items-center justify-end h-10">
                             {hour.toString().padStart(2, '0')}:00
                           </div>
-                          {rowUsers.map(([user, userHeatmap]) => {
+                          {rowUsers.map(({ user, userHeatmap }) => {
                             const userMaxValue = Math.max(...userHeatmap.flat())
                             
                             return (
