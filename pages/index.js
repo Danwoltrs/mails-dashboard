@@ -487,7 +487,7 @@ export default function Dashboard() {
                       <div className="text-center py-12 text-gray-500">
                         Select at least one CSV file to view analytics
                       </div>
-                    )
+                    )}
                   </div>
                 </div>
               </div>
