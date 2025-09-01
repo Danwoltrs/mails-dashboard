@@ -307,6 +307,7 @@ export default function Dashboard() {
                   </button>
 
                   {!sidebarCollapsed && (
+                  <>
                   {/* CSV Upload */}
                   <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
                     <h2 className="text-lg font-semibold text-emerald-800 mb-4 border-b border-emerald-100 pb-2">Upload CSV File</h2>
@@ -464,7 +465,8 @@ export default function Dashboard() {
                       </>
                     )}
                   </div>
-                }
+                  </>
+                  )}
 
                 {/* Right Column - Analytics */}
                 <div className="flex-1 min-w-0">
