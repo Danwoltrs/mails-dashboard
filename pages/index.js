@@ -254,7 +254,7 @@ export default function Dashboard() {
                           >
                             Admin Panel
                           </button>
-                        )}
+                        )
                         <button
                           onClick={() => signOut()}
                           className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700"
@@ -263,7 +263,7 @@ export default function Dashboard() {
                         </button>
                       </div>
                     </div>
-                  )}
+                  )
                 </div>
               </div>
             </div>
@@ -352,7 +352,7 @@ export default function Dashboard() {
                           <p>6. Download the generated CSV file and upload it above</p>
                         </div>
                       </div>
-                    )}
+                    )
                   </div>
 
                   {/* File List */}
@@ -374,7 +374,7 @@ export default function Dashboard() {
                             None
                           </button>
                         </div>
-                      )}
+                      )
                     </div>
                     
                     {loading ? (
@@ -454,7 +454,7 @@ export default function Dashboard() {
                                         <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                         </svg>
-                                      )}
+                                      )
                                     </div>
                                   </div>
                                 </div>
@@ -463,10 +463,10 @@ export default function Dashboard() {
                           })}
                         </div>
                       </>
-                    )}
+                    )
                   </div>
                   </>
-                  )}
+                  )
 
                 {/* Right Column - Analytics */}
                 <div className="flex-1 min-w-0">
@@ -477,7 +477,7 @@ export default function Dashboard() {
                         <span className="ml-2 text-sm font-normal text-gray-600">
                           ({selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''})
                         </span>
-                      )}
+                      )
                     </h2>
                     {selectedFiles.length > 0 ? (
                       <EnhancedEmailAnalytics files={selectedFiles} />
@@ -489,11 +489,11 @@ export default function Dashboard() {
                       <div className="text-center py-12 text-gray-500">
                         Select at least one CSV file to view analytics
                       </div>
-                    )}
+                    )
                   </div>
                 </div>
               </div>
-          )}
+          )
         </main>
 
         {/* Admin Modal */}
