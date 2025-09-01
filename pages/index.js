@@ -465,6 +465,9 @@ export default function Dashboard() {
                       </>
                     )}
                   </div>
+                  </>
+                )}
+                </div>
 
                 {/* Right Column - Analytics */}
                 <div className="flex-1 min-w-0">
