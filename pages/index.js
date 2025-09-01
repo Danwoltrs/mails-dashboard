@@ -336,8 +336,8 @@ export default function Dashboard() {
                   {/* Sidebar Toggle Button */}
                   <button
                     onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                    className="absolute top-0 left-0 transform -translate-x-1/2 bg-emerald-600 text-white p-2 rounded-full shadow-lg hover:bg-emerald-700 transition-colors z-10"
-                    style={{ left: sidebarCollapsed ? '0' : '-24px' }}
+                    className="fixed top-32 bg-emerald-600 text-white p-2 rounded-full shadow-lg hover:bg-emerald-700 transition-all duration-300 z-20"
+                    style={{ left: sidebarCollapsed ? '12px' : '350px', transform: 'translateX(-50%)' }}
                   >
                     <svg
                       className={`w-4 h-4 transition-transform duration-300 ${sidebarCollapsed ? '' : 'rotate-180'}`}
