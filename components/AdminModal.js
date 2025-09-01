@@ -6,6 +6,10 @@ export default function AdminModal({ isOpen, onClose }) {
 
   if (!isOpen || !session?.user?.isAdmin) return null
 
+  const envAdmins = process.env.ALLOWED_USERS
+    ? process.env.ALLOWED_USERS.split(',').map(email => email.trim()).filter(email => email)
+    : []
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -44,7 +48,7 @@ export default function AdminModal({ isOpen, onClose }) {
                     <span className="text-sm text-gray-800 font-medium">rasmus@wolthers.com</span>
                     <span className="ml-2 text-xs text-gray-600 bg-white px-2 py-1 rounded border">hardcoded admin</span>
                   </div>
-                  {process.env.ALLOWED_USERS?.split(',').map(email => email.trim()).filter(email => email).map(email => (
+                  {envAdmins.map(email => (
                     <div key={email} className="flex items-center">
                       <div className="w-2 h-2 bg-emerald-600 rounded-full mr-3"></div>
                       <span className="text-sm text-gray-800">{email}</span>
