@@ -14,6 +14,7 @@ export default function Dashboard() {
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [analyticsMode, setAnalyticsMode] = useState('all') // 'all' or 'selected'
   const [showInstructions, setShowInstructions] = useState(false) // Collapsible instructions
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false) // Collapsible sidebar
 
   useEffect(() => {
     if (session) {
@@ -286,9 +287,26 @@ export default function Dashboard() {
             </div>
           ) : (
             /* Admin View - Full dashboard */
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="flex gap-8 relative">
                 {/* Left Column - File Management */}
-                <div className="lg:col-span-1 space-y-6">
+                <div className={`transition-all duration-300 space-y-6 ${sidebarCollapsed ? 'w-12' : 'w-80'} flex-shrink-0`}>
+                  {/* Sidebar Toggle Button */}
+                  <button
+                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                    className="absolute top-0 right-0 transform translate-x-1/2 bg-emerald-600 text-white p-2 rounded-full shadow-lg hover:bg-emerald-700 transition-colors z-10"
+                    style={{ right: sidebarCollapsed ? '0' : '-24px' }}
+                  >
+                    <svg
+                      className={`w-4 h-4 transition-transform duration-300 ${sidebarCollapsed ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+
+                  {!sidebarCollapsed && (
                   {/* CSV Upload */}
                   <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
                     <h2 className="text-lg font-semibold text-emerald-800 mb-4 border-b border-emerald-100 pb-2">Upload CSV File</h2>
@@ -446,10 +464,10 @@ export default function Dashboard() {
                       </>
                     )}
                   </div>
-                </div>
+                }
 
                 {/* Right Column - Analytics */}
-                <div className="lg:col-span-3">
+                <div className="flex-1 min-w-0">
                   <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
                     <h2 className="text-lg font-semibold text-emerald-800 mb-4 border-b border-emerald-100 pb-2">
                       Email Analytics
