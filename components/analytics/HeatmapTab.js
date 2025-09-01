@@ -66,7 +66,7 @@ export default function HeatmapTab({ heatmapData, dayNames, windowWidth }) {
                 {/* User names centered and capitalized */}
                 <div className="flex mb-2">
                   <div className="w-12"></div>
-                  {rowUsers.map(({ user, totalEmails }) => {
+                  {rowUsers.map(({ user, userHeatmap, totalEmails }) => {
                     const userName = user.split('@')[0]
                     const capitalizedName = userName.charAt(0).toUpperCase() + userName.slice(1).toLowerCase()
 
