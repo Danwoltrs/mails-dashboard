@@ -463,10 +463,8 @@ export default function Dashboard() {
                           })}
                         </div>
                       </>
-                    )
+                    )}
                   </div>
-                  </>
-                  )
 
                 {/* Right Column - Analytics */}
                 <div className="flex-1 min-w-0">
@@ -477,7 +475,7 @@ export default function Dashboard() {
                         <span className="ml-2 text-sm font-normal text-gray-600">
                           ({selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''})
                         </span>
-                      )
+                      )}
                     </h2>
                     {selectedFiles.length > 0 ? (
                       <EnhancedEmailAnalytics files={selectedFiles} />
