@@ -143,7 +143,7 @@ export default function Dashboard() {
     
     const earliest = new Date(dateRange.earliest)
     const latest = new Date(dateRange.latest)
-    const formatOptions = { year: 'numeric', month: 'short' }
+    const formatOptions = { year: 'numeric', month: 'short', day: 'numeric' }
     
     const earliestStr = earliest.toLocaleDateString('en-US', formatOptions)
     const latestStr = latest.toLocaleDateString('en-US', formatOptions)
@@ -153,6 +153,49 @@ export default function Dashboard() {
     }
     
     return `${earliestStr} - ${latestStr}`
+  }
+
+  const getLatestEmailDate = () => {
+    if (csvFiles.length === 0) return null
+    
+    let latestDate = null
+    csvFiles.forEach(file => {
+      if (file.dateRange && file.dateRange.latest) {
+        const fileLatestDate = new Date(file.dateRange.latest)
+        if (!latestDate || fileLatestDate > latestDate) {
+          latestDate = fileLatestDate
+        }
+      }
+    })
+    
+    return latestDate
+  }
+
+  const formatLastEmailDate = (date) => {
+    if (!date) return 'No recent emails found'
+    
+    const now = new Date()
+    const diffTime = Math.abs(now - date)
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+    const formatOptions = { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }
+    
+    const dateStr = date.toLocaleDateString('en-US', formatOptions)
+    
+    if (diffDays === 0) {
+      return `Today at ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
+    } else if (diffDays === 1) {
+      return `Yesterday at ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago (${dateStr})`
+    } else {
+      return dateStr
+    }
   }
 
   if (status === "loading") {
@@ -293,16 +336,16 @@ export default function Dashboard() {
                   {/* Sidebar Toggle Button */}
                   <button
                     onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                    className="absolute top-0 right-0 transform translate-x-1/2 bg-emerald-600 text-white p-2 rounded-full shadow-lg hover:bg-emerald-700 transition-colors z-10"
-                    style={{ right: sidebarCollapsed ? '0' : '-24px' }}
+                    className="absolute top-0 left-0 transform -translate-x-1/2 bg-emerald-600 text-white p-2 rounded-full shadow-lg hover:bg-emerald-700 transition-colors z-10"
+                    style={{ left: sidebarCollapsed ? '0' : '-24px' }}
                   >
                     <svg
-                      className={`w-4 h-4 transition-transform duration-300 ${sidebarCollapsed ? 'rotate-180' : ''}`}
+                      className={`w-4 h-4 transition-transform duration-300 ${sidebarCollapsed ? '' : 'rotate-180'}`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
 
@@ -354,6 +397,21 @@ export default function Dashboard() {
                       </div>
                     )}
                   </div>
+
+                  {/* Last Email Date Indicator */}
+                  {csvFiles.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div className="text-sm text-blue-800">
+                          <span className="font-medium">Last email received:</span>
+                          <span className="ml-1">{formatLastEmailDate(getLatestEmailDate())}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* File List */}
                   <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">

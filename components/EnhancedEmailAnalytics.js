@@ -357,30 +357,66 @@ export default function EnhancedEmailAnalytics({ files }) {
     <div className="space-y-6">
       {/* User Role and Data Filter Indicator */}
       {data && (
-        <div className="flex justify-between items-center bg-gray-50 rounded-lg p-3 border border-emerald-100">
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-700">
-              Viewing as: <span className="font-medium text-gray-800">{data.userRole}</span>
-            </span>
-            {data.fileCount && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-gray-800 border">
-                {data.fileCount} file{data.fileCount !== 1 ? 's' : ''} merged
+        <div className="space-y-3">
+          <div className="flex justify-between items-center bg-gray-50 rounded-lg p-3 border border-emerald-100">
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-700">
+                Viewing as: <span className="font-medium text-gray-800">{data.userRole}</span>
               </span>
-            )}
-            {data.isFiltered && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-gray-800 border">
-                Filtered to your data only
-              </span>
-            )}
-            {!data.isFiltered && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-gray-800 border">
-                Viewing all data
-              </span>
-            )}
+              {data.fileCount && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-gray-800 border">
+                  {data.fileCount} file{data.fileCount !== 1 ? 's' : ''} merged
+                </span>
+              )}
+              {data.isFiltered && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-gray-800 border">
+                  Filtered to your data only
+                </span>
+              )}
+              {!data.isFiltered && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-gray-800 border">
+                  Viewing all data
+                </span>
+              )}
+            </div>
+            <div className="text-sm text-gray-600">
+              {heatmapData.totalEmails} emails ({timeFilter === 'all' ? 'all time' : timeFilters.find(f => f.id === timeFilter)?.label})
+            </div>
           </div>
-          <div className="text-sm text-gray-600">
-            {heatmapData.totalEmails} emails ({timeFilter === 'all' ? 'all time' : timeFilters.find(f => f.id === timeFilter)?.label})
-          </div>
+
+          {/* Deduplication Statistics */}
+          {data.deduplicationStats && data.fileCount > 1 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-start space-x-2">
+                <svg className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="text-sm text-blue-800 min-w-0">
+                  <div className="font-medium mb-1">Duplicate Detection Applied</div>
+                  <div className="space-y-1">
+                    {data.isFiltered ? (
+                      <div>
+                        Processed <span className="font-medium">{data.deduplicationStats.filtered.originalCount}</span> emails, 
+                        removed <span className="font-medium text-blue-900">{data.deduplicationStats.filtered.duplicatesRemoved}</span> duplicates, 
+                        showing <span className="font-medium text-blue-900">{data.deduplicationStats.filtered.uniqueCount}</span> unique emails
+                      </div>
+                    ) : (
+                      <div>
+                        Processed <span className="font-medium">{data.deduplicationStats.unfiltered.originalCount}</span> emails, 
+                        removed <span className="font-medium text-blue-900">{data.deduplicationStats.unfiltered.duplicatesRemoved}</span> duplicates, 
+                        showing <span className="font-medium text-blue-900">{data.deduplicationStats.unfiltered.uniqueCount}</span> unique emails
+                      </div>
+                    )}
+                    {(data.deduplicationStats.filtered.duplicatesRemoved > 0 || data.deduplicationStats.unfiltered.duplicatesRemoved > 0) && (
+                      <div className="text-xs text-blue-700">
+                        Duplicates were identified using message IDs and email timestamps to prevent double counting across overlapping CSV files.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
