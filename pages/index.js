@@ -374,7 +374,7 @@ export default function Dashboard() {
                             None
                           </button>
                         </div>
-                      )
+                      )}
                     </div>
                     
                     {loading ? (
