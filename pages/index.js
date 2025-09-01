@@ -352,7 +352,7 @@ export default function Dashboard() {
                           <p>6. Download the generated CSV file and upload it above</p>
                         </div>
                       </div>
-                    )
+                    )}
                   </div>
 
                   {/* File List */}
