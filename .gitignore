@@ -53,3 +53,7 @@ pids
 # Uploaded files (keep structure but not actual files for privacy)
 /public/mails/*.csv
 !/public/mails/.gitkeep
+
+# Raw Exchange exports used for local testing. These are large (tens of MB) and
+# contain real staff mail metadata including subject lines — keep them local.
+/Prompt/*.csv

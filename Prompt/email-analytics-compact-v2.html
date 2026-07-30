@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Email Analytics — Staff Comparison</title>
+<style>
+:root{
+  --ink:#0C231C; --ink-2:#41564D; --ink-3:#7C8C85;
+  --line:#DDE3DF; --line-soft:#EBEFEC;
+  --paper:#F6F7F5; --card:#FFFFFF;
+  --green-900:#0E4A36; --green-700:#186B4E;
+  --g1:#E6EEE9; --g2:#BEDACB; --g3:#8CC0A6; --g4:#4E9B79; --g5:#186B4E;
+  --n1:#E7EAF1; --n2:#C4CDE0; --n3:#96A6C6; --n4:#5F79A6; --n5:#3A5788;
+  --brass:#A8791F;
+  --r:7px;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --sans:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:13px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+/* top bar */
+.top{position:sticky;top:0;z-index:40;background:var(--green-900);color:#fff;display:flex;align-items:center;
+  gap:18px;padding:0 18px;height:52px}
+.brand{font-weight:700;letter-spacing:.16em;font-size:12px;text-transform:uppercase}
+.brand span{display:block;font-size:8px;letter-spacing:.3em;opacity:.6;font-weight:500}
+.top h1{font-size:13px;font-weight:600;margin:0}
+.top .sep{width:1px;height:22px;background:rgba(255,255,255,.18)}
+.meta{font-size:11px;color:rgba(255,255,255,.68);display:flex;gap:14px}
+.meta b{color:#fff;font-weight:600}
+.top .right{margin-left:auto;display:flex;gap:8px}
+.ghost{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:#fff;font:inherit;
+  font-size:11px;padding:5px 10px;border-radius:var(--r);cursor:pointer}
+.ghost:hover{background:rgba(255,255,255,.18)}
+/* rail */
+.rail{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 18px;background:var(--card);
+  border-bottom:1px solid var(--line)}
+.seg{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.seg button{font:inherit;font-size:11px;padding:5px 11px;background:#fff;border:0;cursor:pointer;
+  color:var(--ink-2);border-right:1px solid var(--line-soft)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--green-900);color:#fff}
+.lbl{font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:var(--ink-3);font-weight:600}
+.rail .spacer{flex:1}
+/* stats */
+.strip{display:flex;padding:0 18px;background:var(--card);border-bottom:1px solid var(--line)}
+.stat{padding:11px 22px 12px 0;margin-right:22px;border-right:1px solid var(--line-soft)}
+.stat:last-child{border-right:0}
+.stat em{display:block;font-style:normal;font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600}
+.stat b{font-size:19px;font-weight:650;letter-spacing:-.02em}
+.stat small{color:var(--ink-3);font-size:11px;margin-left:5px;font-weight:500}
+main{padding:18px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:16px}
+.phead{display:flex;align-items:baseline;gap:12px;padding:13px 16px 11px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.phead h2{margin:0;font-size:13px;font-weight:650}
+.phead p{margin:0;font-size:11px;color:var(--ink-3)}
+.phead .legend{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:10px;color:var(--ink-3)}
+.ramp{display:flex;gap:2px}
+.ramp i{width:11px;height:9px;border-radius:2px;display:block}
+/* compact matrix */
+.grid{width:100%;overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:900px}
+thead th{font-size:9px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.1em;
+  padding:8px 6px 7px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+.hourhead{display:flex;gap:2px}
+.hourhead span{width:16px;text-align:center;font-size:8px;color:var(--ink-3)}
+.hourhead span.q{color:var(--ink-2);font-weight:700}
+tbody tr{border-bottom:1px solid var(--line-soft)}
+tbody tr:hover{background:#FBFCFB}
+td{padding:0 6px;height:38px;vertical-align:middle}
+td.who{padding-left:16px;width:170px}
+.who .row{display:flex;align-items:center;gap:9px}
+.dot{width:22px;height:22px;border-radius:50%;background:var(--g1);color:var(--green-900);display:grid;
+  place-items:center;font-size:9px;font-weight:700;flex:none}
+.who .nm{font-size:12px;font-weight:600}
+.who .rl{font-size:9.5px;color:var(--ink-3)}
+td.num{width:86px}
+.total{font-size:13px;font-weight:650}
+.share{font-size:9.5px;color:var(--ink-3)}
+.bar{height:3px;background:var(--line-soft);border-radius:2px;margin-top:4px;overflow:hidden;width:64px}
+.bar i{display:block;height:100%;background:var(--green-700);border-radius:2px}
+td.ribbon{padding:0}
+.cells{display:flex;gap:2px;align-items:flex-end}
+.cell{width:16px;border-radius:2px;background:var(--g1)}
+.cell.pk{box-shadow:inset 0 0 0 1.5px var(--brass)}
+.avgline{display:flex;gap:2px;margin-top:3px}
+.avgline i{width:16px;height:2px;background:transparent;border-radius:1px}
+.avgline i.on{background:#C9D2CD}
+td.days{width:112px}
+.dcells{display:flex;gap:2px}
+.dcell{width:13px;height:22px;border-radius:2px;background:var(--g1);position:relative}
+.dcell em{position:absolute;bottom:-11px;left:0;right:0;text-align:center;font-size:7.5px;font-style:normal;color:var(--ink-3)}
+td.peak{width:92px;font-size:11px;color:var(--ink-2)}
+td.peak b{font-family:var(--mono);font-size:11px;color:var(--ink);font-weight:600}
+td.late{width:78px}
+.pill{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:var(--n1);color:var(--n5)}
+.pill.hot{background:#FDF2DF;color:var(--brass)}
+tfoot td{padding:9px 6px;font-size:10px;color:var(--ink-3);background:#FAFBFA}
+tfoot td.who{padding-left:16px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.1em;font-size:9px}
+/* ---- full 7x24 grids ---- */
+.gwrap{display:grid;gap:14px;padding:14px 16px 18px;grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
+.gcard{border:1px solid var(--line);border-radius:8px;padding:12px 13px 13px;background:#FCFDFC}
+.gtop{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.gtop .nm{font-size:12.5px;font-weight:650}
+.gtop .rl{font-size:9.5px;color:var(--ink-3)}
+.gtop .tt{margin-left:auto;text-align:right}
+.gtop .tt b{font-size:14px;font-weight:650}
+.gtop .tt span{display:block;font-size:9.5px;color:var(--ink-3)}
+.hm{display:grid;grid-template-columns:22px repeat(24,1fr) 34px;gap:2px;align-items:center}
+.hm .hh{font-size:7.5px;color:var(--ink-3);text-align:center}
+.hm .rl2{font-size:9px;color:var(--ink-3);text-align:right;padding-right:3px;font-weight:600}
+.hm .c{aspect-ratio:1;border-radius:2px;background:var(--g1);font-size:7px;color:#fff;display:grid;place-items:center}
+.hm .c.lo{color:var(--ink-3)}
+.hm .rt{font-size:9px;color:var(--ink-2);text-align:right;font-weight:600}
+.hm .ct{font-size:7.5px;color:var(--ink-3);text-align:center;writing-mode:vertical-rl;transform:rotate(180deg);
+  height:26px;margin:0 auto;font-weight:600}
+.hm .cap{font-size:8px;color:var(--ink-3);text-align:right;padding-right:3px}
+.gfoot{display:flex;gap:14px;margin-top:9px;padding-top:8px;border-top:1px dashed var(--line);font-size:10.5px;color:var(--ink-2)}
+.gfoot div span{color:var(--ink-3)}
+.gfoot div b{font-weight:650}
+.hide{display:none}
+.note{margin:12px 18px 6px;font-size:10.5px;color:var(--ink-3)}
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(12,35,28,.34);opacity:0;pointer-events:none;transition:opacity .18s;z-index:50}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:370px;max-width:92vw;background:var(--card);
+  border-left:1px solid var(--line);transform:translateX(100%);transition:transform .2s;z-index:60;display:flex;flex-direction:column}
+.drawer.on{transform:none}
+.dhead{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.dhead h2{margin:0;font-size:13px;font-weight:650}
+.dhead button{all:unset;cursor:pointer;margin-left:auto;color:var(--ink-3);font-size:16px}
+.drop{margin:14px 16px;border:1px dashed var(--line);border-radius:8px;padding:16px;text-align:center;
+  font-size:11.5px;color:var(--ink-3);background:#FBFCFB}
+.drop b{display:block;color:var(--ink);font-size:12px;font-weight:600;margin-bottom:2px}
+.flist{overflow-y:auto;padding:0 16px 16px}
+.f{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line-soft)}
+.f .fn{min-width:0}
+.f .fn div{font-size:11.5px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f .fn span{font-size:10px;color:var(--ink-3);font-family:var(--mono)}
+.f .x{margin-left:auto;all:unset;cursor:pointer;color:var(--ink-3);font-size:11px;padding:2px 5px;border-radius:4px}
+.f .x:hover{background:var(--line-soft);color:#A33}
+.chk{width:14px;height:14px;border-radius:3px;background:var(--green-700);color:#fff;font-size:9px;display:grid;place-items:center;flex:none}
+@media (max-width:760px){.meta{display:none}.strip{overflow-x:auto}}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">Wolthers<span>Associates</span></div>
+  <div class="sep"></div>
+  <h1>Email Analytics</h1>
+  <div class="meta">
+    <span><b>11,593</b> emails</span><span><b>29</b> files merged</span><span>through <b>Aug 18, 2025</b></span>
+  </div>
+  <div class="right">
+    <button class="ghost" onclick="openDrawer()">Manage files</button>
+    <button class="ghost">Export</button>
+  </div>
+</div>
+
+<div class="rail">
+  <span class="lbl">Period</span>
+  <div class="seg"><button aria-pressed="true">All time</button><button>Year</button><button>Month</button><button>Week</button></div>
+  <span class="lbl" style="margin-left:8px">Direction</span>
+  <div class="seg"><button aria-pressed="true">All</button><button>Sent</button><button>Received</button></div>
+  <div class="spacer"></div>
+  <span class="lbl">Scale</span>
+  <div class="seg" id="scale"><button aria-pressed="true" data-s="shared">Shared</button><button data-s="own">Per person</button></div>
+  <span class="lbl" style="margin-left:8px">View</span>
+  <div class="seg" id="view"><button aria-pressed="true" data-v="both">Both</button><button data-v="rows">Rows</button><button data-v="grids">Grids</button></div>
+</div>
+
+<div class="strip">
+  <div class="stat"><em>Total emails</em><b>11,593</b><small>14,168 duplicates removed</small></div>
+  <div class="stat"><em>Active staff</em><b>3</b></div>
+  <div class="stat"><em>Average each</em><b>3,864</b></div>
+  <div class="stat"><em>Busiest hour</em><b>15:00</b><small>721 emails</small></div>
+  <div class="stat"><em>Outside 07–19h</em><b>17%</b><small>1,932 emails</small></div>
+</div>
+
+<main>
+  <!-- compact comparison -->
+  <div class="panel" id="p-rows">
+    <div class="phead">
+      <h2>Side by side</h2>
+      <p>Hour of day, then day of week. Grey ticks mark the team baseline.</p>
+      <div class="legend">
+        <span>Low</span>
+        <span class="ramp"><i style="background:var(--g1)"></i><i style="background:var(--g2)"></i><i style="background:var(--g3)"></i><i style="background:var(--g4)"></i><i style="background:var(--g5)"></i></span>
+        <span>High</span>
+        <span class="ramp" style="margin-left:6px"><i style="background:var(--n4)"></i></span><span>Outside 07–19h</span>
+        <span class="ramp" style="margin-left:6px"><i style="background:#fff;box-shadow:inset 0 0 0 1.5px var(--brass)"></i></span><span>Peak</span>
+      </div>
+    </div>
+    <div class="grid">
+      <table>
+        <thead><tr>
+          <th style="padding-left:16px">Person</th><th>Emails</th>
+          <th style="padding-left:0"><div class="hourhead" id="hh"></div></th>
+          <th>Day of week</th><th>Peak</th><th>After hrs</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+        <tfoot><tr>
+          <td class="who">Team shape</td><td></td>
+          <td class="ribbon"><div class="cells" id="teamcells"></div></td>
+          <td class="days"><div class="dcells" id="teamdays"></div></td>
+          <td colspan="2">Sum of all three</td>
+        </tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- full grids -->
+  <div class="panel" id="p-grids">
+    <div class="phead">
+      <h2>Full week &times; hour</h2>
+      <p>Weekdays down, hours across. Margins show row and column totals.</p>
+      <div class="legend"><span id="scalenote">Shared scale — cells comparable between people</span></div>
+    </div>
+    <div class="gwrap" id="gwrap"></div>
+  </div>
+
+  <p class="note">Duplicates identified by message ID and timestamp across overlapping exports, so nothing is counted twice.</p>
+</main>
+
+<div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer" aria-label="Manage files">
+  <div class="dhead"><h2>Files</h2><span class="share">29 of 29 selected</span><button onclick="closeDrawer()">&times;</button></div>
+  <div class="drop"><b>Drop CSV exports here</b>Up to 5 MB each · multiple files at once</div>
+  <div class="flist" id="flist"></div>
+</aside>
+
+<script>
+const HOURS=24, DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], D1=['S','M','T','W','T','F','S'];
+const PEOPLE=[
+  {n:'Débora Sabino', r:'Trading desk', t:4779, pk:15, sp:2.6, ev:.42, we:.03},
+  {n:'Karina Souza',  r:'Logistics',    t:4700, pk:14, sp:2.4, ev:.30, we:.02},
+  {n:'Natalia Reis',  r:'Logistics',    t:2114, pk:16, sp:2.7, ev:.34, we:.03},
+];
+const TOTAL=PEOPLE.reduce((a,p)=>a+p.t,0);
+const rnd=s=>()=>(s=s*16807%2147483647)/2147483647;
+
+PEOPLE.forEach((p,i)=>{
+  const R=rnd(i*97+13);
+  let h=Array.from({length:HOURS},(_,x)=>{
+    let v=Math.exp(-Math.pow(x-p.pk,2)/(2*p.sp*p.sp));
+    if(x>=18&&x<=22) v+=p.ev*Math.exp(-Math.pow(x-20,2)/4.5);
+    if(x<=5) v+=p.ev*.12*R();
+    if(x===12) v*=.55;
+    return Math.max(0,v*(.82+.36*R()));
+  });
+  const s=h.reduce((a,b)=>a+b,0);
+  p.h=h.map(v=>Math.round(v/s*p.t));
+  p.hmax=Math.max(...p.h); p.peak=p.h.indexOf(p.hmax);
+  p.late=p.h.reduce((a,v,x)=>a+((x<7||x>19)?v:0),0);
+  const dw=[p.we,1,1.06,1.04,1.02,.86,p.we*.7], ds=dw.reduce((a,b)=>a+b,0);
+  p.d=dw.map(v=>Math.round(v/ds*p.t)); p.dmax=Math.max(...p.d);
+  p.m=p.d.map(dt=>{const r2=rnd(i*31+dt%97+7);
+    const row=p.h.map(v=>v*(.7+.6*r2())), rs=row.reduce((a,b)=>a+b,0)||1;
+    return row.map(v=>Math.round(v/rs*dt));});
+  p.mmax=Math.max(...p.m.flat());
+  p.colT=Array.from({length:24},(_,x)=>p.m.reduce((a,r)=>a+r[x],0));
+});
+const MMAX=Math.max(...PEOPLE.map(p=>p.mmax));
+const TEAMH=Array.from({length:HOURS},(_,x)=>PEOPLE.reduce((a,p)=>a+p.h[x],0)), THMAX=Math.max(...TEAMH);
+const TEAMD=Array.from({length:7},(_,x)=>PEOPLE.reduce((a,p)=>a+p.d[x],0)), TDMAX=Math.max(...TEAMD);
+let SCALE='shared';
+
+const off=x=>x<7||x>19;
+function shade(v,max,x){
+  if(!v) return 'transparent';
+  const t=v/max, ramp=off(x)?['--n1','--n2','--n3','--n4','--n5']:['--g1','--g2','--g3','--g4','--g5'];
+  return `var(${ramp[t<.08?0:t<.28?1:t<.52?2:t<.78?3:4]})`;
+}
+const dark=(v,max)=>v/max>=.52;
+const fmt=n=>n.toLocaleString('en-US');
+const hh=h=>String(h).padStart(2,'0')+':00';
+const initials=n=>n.split(' ').map(w=>w[0]).slice(0,2).join('');
+
+document.getElementById('hh').innerHTML=
+  Array.from({length:HOURS},(_,x)=>`<span class="${x%6===0?'q':''}">${x%3===0?String(x).padStart(2,'0'):''}</span>`).join('');
+
+function renderRows(){
+  document.getElementById('rows').innerHTML=PEOPLE.map(p=>{
+    const ls=Math.round(p.late/p.t*100);
+    return `<tr>
+      <td class="who"><div class="row"><span class="dot">${initials(p.n)}</span>
+        <span><span class="nm">${p.n}</span><br><span class="rl">${p.r}</span></span></div></td>
+      <td class="num"><span class="total">${fmt(p.t)}</span> <span class="share">${(p.t/TOTAL*100).toFixed(1)}%</span>
+        <div class="bar"><i style="width:${p.t/PEOPLE[0].t*100}%"></i></div></td>
+      <td class="ribbon"><div class="cells">${p.h.map((v,x)=>
+          `<div class="cell${x===p.peak?' pk':''}" style="height:${Math.max(v?4:3,Math.round(v/p.hmax*22))}px;background:${shade(v,p.hmax,x)}" title="${p.n} · ${hh(x)} · ${fmt(v)}"></div>`).join('')}</div>
+        <div class="avgline">${TEAMH.map(v=>`<i class="${v/THMAX>.35?'on':''}"></i>`).join('')}</div></td>
+      <td class="days"><div class="dcells">${p.d.map((v,x)=>
+          `<div class="dcell" style="background:${shade(v,p.dmax,10)}" title="${DAYS[x]} · ${fmt(v)}"><em>${D1[x]}</em></div>`).join('')}</div></td>
+      <td class="peak"><b>${hh(p.peak)}</b><br><span class="share">${fmt(p.hmax)} emails</span></td>
+      <td class="late"><span class="pill${ls>=22?' hot':''}">${ls}%</span></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('teamcells').innerHTML=TEAMH.map((v,x)=>
+    `<div class="cell" style="height:${Math.max(3,Math.round(v/THMAX*22))}px;background:${shade(v,THMAX,x)}" title="${hh(x)} · ${fmt(v)}"></div>`).join('');
+  document.getElementById('teamdays').innerHTML=TEAMD.map((v,x)=>
+    `<div class="dcell" style="background:${shade(v,TDMAX,10)}" title="${DAYS[x]} · ${fmt(v)}"><em>${D1[x]}</em></div>`).join('');
+}
+
+function renderGrids(){
+  document.getElementById('gwrap').innerHTML=PEOPLE.map(p=>{
+    const mx=SCALE==='shared'?MMAX:p.mmax;
+    const first=p.h.findIndex(v=>v>p.hmax*.12), last=23-[...p.h].reverse().findIndex(v=>v>p.hmax*.12);
+    const cells=p.m.map((row,d)=>
+      `<span class="rl2">${DAYS[d]}</span>`+
+      row.map((v,x)=>`<span class="c${dark(v,mx)?'':' lo'}" style="background:${shade(v,mx,x)}" title="${DAYS[d]} ${hh(x)} · ${fmt(v)}">${v>mx*.5?v:''}</span>`).join('')+
+      `<span class="rt">${fmt(p.d[d])}</span>`).join('');
+    return `<div class="gcard">
+      <div class="gtop"><span class="dot">${initials(p.n)}</span>
+        <span><span class="nm">${p.n}</span><br><span class="rl">${p.r}</span></span>
+        <span class="tt"><b>${fmt(p.t)}</b><span>${(p.t/TOTAL*100).toFixed(1)}% of all email</span></span></div>
+      <div class="hm">
+        <span></span>${Array.from({length:24},(_,x)=>`<span class="hh">${x%2===0?String(x).padStart(2,'0'):''}</span>`).join('')}<span></span>
+        ${cells}
+        <span class="cap">total</span>${p.colT.map(v=>`<span class="ct">${v>mx*.35?fmt(v):''}</span>`).join('')}<span class="rt">${fmt(p.t)}</span>
+      </div>
+      <div class="gfoot">
+        <div><span>Working window</span> <b>${hh(first)}–${hh(last)}</b></div>
+        <div><span>Peak</span> <b>${hh(p.peak)}</b></div>
+        <div><span>After hours</span> <b>${Math.round(p.late/p.t*100)}%</b></div>
+        <div><span>Weekend</span> <b>${fmt(p.d[0]+p.d[6])}</b></div>
+      </div></div>`;
+  }).join('');
+  document.getElementById('scalenote').textContent = SCALE==='shared'
+    ? 'Shared scale — cells comparable between people'
+    : 'Per person scale — shows each pattern, not each volume';
+}
+
+document.getElementById('scale').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  [...e.currentTarget.children].forEach(x=>x.setAttribute('aria-pressed',x===b));
+  SCALE=b.dataset.s; renderGrids();
+});
+document.getElementById('view').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  [...e.currentTarget.children].forEach(x=>x.setAttribute('aria-pressed',x===b));
+  const v=b.dataset.v;
+  document.getElementById('p-rows').classList.toggle('hide',v==='grids');
+  document.getElementById('p-grids').classList.toggle('hide',v==='rows');
+});
+
+const FILES=[
+  ['MTDetail_Message trace 09-02.csv','3,154 KB · 2,468 rows'],
+  ['MTDetail_Message trace 09-02 (2).csv','3,142 KB · 2,532 rows'],
+  ['MTDetail_Message trace 09-02 (3).csv','3,039 KB · 2,829 rows'],
+  ['part_7_1755873935191.csv','3,722 KB · May 21 – Aug 18, 2025'],
+  ['part3_1755873930918.csv','3,700 KB · May 21 – Aug 18, 2025'],
+  ['part_2_1755873860249.csv','4,431 KB · May 21 – Aug 18, 2025'],
+  ['part11_1755873771091.csv','3,815 KB · 2,566 rows'],
+  ['part_5_1755873765527.csv','3,629 KB · 2,442 rows'],
+  ['part_4_1755872918572.csv','3,449 KB · 2,341 rows'],
+  ['MTSummary_Message trace 2023-Q1.csv','2 KB · Apr 1, 2023'],
+  ['MTSummary_Message trace 2023-H1.csv','4,035 KB · Jun 1 – Jun 30, 2023'],
+  ['mail_summary_Copy_2021-12.csv','2,504 KB · Dec 16 – Dec 31, 2021'],
+];
+document.getElementById('flist').innerHTML=FILES.map(([n,m])=>
+  `<div class="f"><span class="chk">&#10003;</span><span class="fn"><div>${n}</div><span>${m}</span></span><button class="x">Remove</button></div>`).join('')
+  +`<div class="f" style="border:0;color:var(--ink-3);font-size:11px;padding-top:10px">+ 17 more files</div>`;
+
+function openDrawer(){drawer.classList.add('on');scrim.classList.add('on')}
+function closeDrawer(){drawer.classList.remove('on');scrim.classList.remove('on')}
+addEventListener('keydown',e=>e.key==='Escape'&&closeDrawer());
+renderRows(); renderGrids();
+</script>
+</body>
+</html>

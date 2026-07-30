@@ -112,7 +112,15 @@ export function deduplicateEmails(rows, debugMode = false) {
 
 // Parse CSV text and return structured data with user filtering
 export function parseCsv(csvText, fileName = 'unknown', session = null) {
-  const lines = csvText.split('\n').filter(line => line.trim())
+  // Strip a leading byte order mark, otherwise the first header becomes
+  // "﻿date_time_utc" and every timestamp lookup misses — which silently drops
+  // every row in the file. Handles both a decoded BOM and the raw UTF-8 bytes
+  // surviving as latin-1 characters.
+  let text = csvText
+  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1)
+  else if (text.charCodeAt(0) === 0xef && text.charCodeAt(1) === 0xbb && text.charCodeAt(2) === 0xbf)
+    text = text.slice(3)
+  const lines = text.split('\n').filter(line => line.trim())
   if (lines.length === 0) return null
 
   const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
@@ -169,8 +177,11 @@ export function parseCsv(csvText, fileName = 'unknown', session = null) {
 // Merge multiple parsed CSV datasets into one with deduplication
 export function mergeCsvData(parsedDataArray) {
   if (parsedDataArray.length === 0) return null
-  if (parsedDataArray.length === 1) return parsedDataArray[0]
 
+  // NOTE: a single file used to bypass this function entirely. Detail exports
+  // carry one row per Exchange event (~7 rows per email), so skipping dedup
+  // inflated single-file totals several times over. Dedup now always runs; the
+  // dedup logic itself is unchanged.
   const allHeaders = new Set()
   parsedDataArray.forEach(data => {
     data.headers.forEach(header => allHeaders.add(header))

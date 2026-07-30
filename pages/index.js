@@ -1,207 +1,17 @@
-import { useSession, signIn, signOut } from "next-auth/react"
-import { useState, useEffect } from 'react'
+import { useSession, signIn } from 'next-auth/react'
+import { useState } from 'react'
 import Head from 'next/head'
-import CsvUpload from '../components/CsvUpload'
-import EnhancedEmailAnalytics from '../components/EnhancedEmailAnalytics'
+import EmailAnalyticsShell from '../components/EmailAnalyticsShell'
 import AdminModal from '../components/AdminModal'
 
 export default function Dashboard() {
   const { data: session, status } = useSession()
-  const [csvFiles, setCsvFiles] = useState([])
-  const [selectedFiles, setSelectedFiles] = useState([]) // Changed from selectedFile to selectedFiles (array)
-  const [loading, setLoading] = useState(false)
   const [showAdminModal, setShowAdminModal] = useState(false)
-  const [showUserMenu, setShowUserMenu] = useState(false)
-  const [analyticsMode, setAnalyticsMode] = useState('all') // 'all' or 'selected'
-  const [showInstructions, setShowInstructions] = useState(false) // Collapsible instructions
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false) // Collapsible sidebar
 
-  useEffect(() => {
-    if (session) {
-      loadCsvFiles()
-    }
-  }, [session])
-
-  // Close user menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showUserMenu && !event.target.closest('.user-menu')) {
-        setShowUserMenu(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showUserMenu])
-
-  const loadCsvFiles = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/list-csv-files')
-      if (response.ok) {
-        const data = await response.json()
-        setCsvFiles(data.files)
-        // Auto-select all files for analytics
-        setSelectedFiles(data.files)
-        setAnalyticsMode('all')
-      }
-    } catch (error) {
-      console.error('Error loading CSV files:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleFileToggle = (file) => {
-    setSelectedFiles(prev => {
-      const isSelected = prev.some(f => f.name === file.name)
-      let newSelection
-      if (isSelected) {
-        newSelection = prev.filter(f => f.name !== file.name)
-      } else {
-        newSelection = [...prev, file]
-      }
-      
-      // Update analytics mode based on selection
-      if (newSelection.length === csvFiles.length) {
-        setAnalyticsMode('all')
-      } else {
-        setAnalyticsMode('selected')
-      }
-      
-      return newSelection
-    })
-  }
-
-  const selectAllFiles = () => {
-    setSelectedFiles(csvFiles)
-    setAnalyticsMode('all')
-  }
-
-  const deselectAllFiles = () => {
-    setSelectedFiles([])
-    setAnalyticsMode('selected')
-  }
-
-  const handleFileUploaded = () => {
-    loadCsvFiles() // Refresh file list after upload
-  }
-
-  const handleDownload = async (filename) => {
-    try {
-      const response = await fetch(`/api/download-csv?filename=${encodeURIComponent(filename)}`)
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.style.display = 'none'
-        a.href = url
-        a.download = filename
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      } else {
-        alert('Failed to download file')
-      }
-    } catch (error) {
-      console.error('Download error:', error)
-      alert('Failed to download file')
-    }
-  }
-
-  const handleDelete = async (filename) => {
-    if (!confirm(`Are you sure you want to delete ${filename}? This action cannot be undone.`)) {
-      return
-    }
-
-    try {
-      const response = await fetch(`/api/delete-csv?filename=${encodeURIComponent(filename)}`, {
-        method: 'DELETE'
-      })
-      
-      if (response.ok) {
-        // Refresh file list after successful deletion
-        loadCsvFiles()
-        alert('File deleted successfully')
-      } else {
-        const data = await response.json()
-        alert(`Failed to delete file: ${data.error}`)
-      }
-    } catch (error) {
-      console.error('Delete error:', error)
-      alert('Failed to delete file')
-    }
-  }
-
-  const formatDateRange = (dateRange) => {
-    if (!dateRange || !dateRange.earliest || !dateRange.latest) {
-      return 'No date info'
-    }
-    
-    const earliest = new Date(dateRange.earliest)
-    const latest = new Date(dateRange.latest)
-    const formatOptions = { year: 'numeric', month: 'short', day: 'numeric' }
-    
-    const earliestStr = earliest.toLocaleDateString('en-US', formatOptions)
-    const latestStr = latest.toLocaleDateString('en-US', formatOptions)
-    
-    if (earliestStr === latestStr) {
-      return earliestStr
-    }
-    
-    return `${earliestStr} - ${latestStr}`
-  }
-
-  const getLatestEmailDate = () => {
-    if (csvFiles.length === 0) return null
-    
-    let latestDate = null
-    csvFiles.forEach(file => {
-      if (file.dateRange && file.dateRange.latest) {
-        const fileLatestDate = new Date(file.dateRange.latest)
-        if (!latestDate || fileLatestDate > latestDate) {
-          latestDate = fileLatestDate
-        }
-      }
-    })
-    
-    return latestDate
-  }
-
-  const formatLastEmailDate = (date) => {
-    if (!date) return 'No recent emails found'
-    
-    const now = new Date()
-    const diffTime = Math.abs(now - date)
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-    const formatOptions = { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }
-    
-    const dateStr = date.toLocaleDateString('en-US', formatOptions)
-    
-    if (diffDays === 0) {
-      return `Today at ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
-    } else if (diffDays === 1) {
-      return `Yesterday at ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
-    } else if (diffDays < 7) {
-      return `${diffDays} days ago (${dateStr})`
-    } else {
-      return dateStr
-    }
-  }
-
-  if (status === "loading") {
+  if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-xl text-gray-600">Loading...</div>
+        <div className="text-sm text-gray-600">Loading…</div>
       </div>
     )
   }
@@ -210,7 +20,7 @@ export default function Dashboard() {
     return (
       <>
         <Head>
-          <title>Email Analytics - Sign In</title>
+          <title>Email Analytics — Sign In</title>
           <meta name="description" content="Email Analytics Dashboard for Wolthers & Associates" />
         </Head>
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-emerald-100">
@@ -218,9 +28,9 @@ export default function Dashboard() {
             <div className="text-center mb-8">
               <div className="mb-6">
                 <div className="inline-block bg-emerald-800 rounded-lg p-4">
-                  <img 
-                    src="https://wolthers.com/images/wolthers-logo-off-white.svg" 
-                    alt="Wolthers & Associates" 
+                  <img
+                    src="https://wolthers.com/images/wolthers-logo-off-white.svg"
+                    alt="Wolthers & Associates"
                     className="h-8 w-auto"
                   />
                 </div>
@@ -236,7 +46,13 @@ export default function Dashboard() {
                 Sign in with Microsoft
               </button>
               <p className="text-xs text-gray-500 text-center">
-                Or try: <a href="/api/auth/signin/azure-ad" className="text-emerald-700 hover:underline">Direct Microsoft Sign-in</a>
+                Or try:{' '}
+                <a
+                  href="/api/auth/signin/azure-ad"
+                  className="text-emerald-700 hover:underline"
+                >
+                  Direct Microsoft Sign-in
+                </a>
               </p>
             </div>
           </div>
@@ -245,319 +61,30 @@ export default function Dashboard() {
     )
   }
 
+  if (!session.user?.isAdmin) {
+    return (
+      <>
+        <Head>
+          <title>Email Analytics — Wolthers &amp; Associates</title>
+        </Head>
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <svg className="w-32 h-32 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+          </svg>
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
       <Head>
-        <title>Email Analytics Dashboard - Wolthers & Associates</title>
+        <title>Email Analytics — Wolthers &amp; Associates</title>
         <meta name="description" content="Email Analytics Dashboard for Wolthers & Associates" />
       </Head>
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <header className="bg-emerald-800 shadow-lg">
-          <div className="px-6">
-            <div className="flex justify-between items-center py-4">
-              <div className="flex items-center space-x-4">
-                <img 
-                  src="https://wolthers.com/images/wolthers-logo-off-white.svg" 
-                  alt="Wolthers & Associates" 
-                  className="h-8 w-auto"
-                />
-                <div className="text-white">
-                  <h1 className="text-xl font-semibold">Email Analytics</h1>
-                  <p className="text-emerald-200 text-sm">Staff Communication Analysis</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="relative user-menu">
-                  <button
-                    onClick={() => setShowUserMenu(!showUserMenu)}
-                    className="flex items-center space-x-2 text-emerald-100 hover:text-white transition duration-200"
-                  >
-                    <span className="text-sm">
-                      {session.user?.name || session.user?.email}
-                    </span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  
-                  {showUserMenu && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                      <div className="py-1">
-                        <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-100">
-                          {session.user?.email}
-                        </div>
-                        {session?.user?.isAdmin && (
-                          <button
-                            onClick={() => {
-                              setShowAdminModal(true)
-                              setShowUserMenu(false)
-                            }}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700"
-                          >
-                            Admin Panel
-                          </button>
-                        )}
-                        <button
-                          onClick={() => signOut()}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700"
-                        >
-                          Sign Out
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="px-6 py-8">
-          {/* Check if user is admin */}
-          {!session?.user?.isAdmin ? (
-            /* Non-Admin View - White screen with email icon */
-            <div className="min-h-[80vh] bg-white rounded-lg shadow-md border border-gray-200 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-gray-400 mb-4">
-                  <svg className="w-32 h-32 mx-auto" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Admin View - Full dashboard */
-            <div className="flex gap-8 relative">
-                {/* Left Column - File Management */}
-                <div className={`transition-all duration-300 space-y-6 ${sidebarCollapsed ? 'w-12' : 'w-80'} flex-shrink-0`}>
-                  {/* Sidebar Toggle Button */}
-                  <button
-                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                    className="fixed top-32 bg-emerald-600 text-white p-2 rounded-full shadow-lg hover:bg-emerald-700 transition-all duration-300 z-20"
-                    style={{ left: sidebarCollapsed ? '12px' : '350px', transform: 'translateX(-50%)' }}
-                  >
-                    <svg
-                      className={`w-4 h-4 transition-transform duration-300 ${sidebarCollapsed ? '' : 'rotate-180'}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-
-                  {!sidebarCollapsed && (
-                  <>
-                  {/* CSV Upload */}
-                  <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
-                    <h2 className="text-lg font-semibold text-emerald-800 mb-4 border-b border-emerald-100 pb-2">Upload CSV File</h2>
-                    <CsvUpload onFileUploaded={handleFileUploaded} />
-                  </div>
-
-                  {/* Collapsible Instructions */}
-                  <div className="bg-white rounded-lg shadow-md border border-emerald-100">
-                    <button
-                      onClick={() => setShowInstructions(!showInstructions)}
-                      className="w-full p-6 text-left flex items-center justify-between hover:bg-gray-50 transition-colors rounded-lg"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="text-blue-600 text-xl">📊</div>
-                        <h2 className="text-lg font-semibold text-emerald-800">How to Download Reports</h2>
-                      </div>
-                      <svg 
-                        className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${showInstructions ? 'rotate-180' : ''}`}
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    
-                    {showInstructions && (
-                      <div className="px-6 pb-6 border-t border-emerald-100">
-                        <div className="pt-4 space-y-2 text-sm text-blue-700">
-                          <p>1. <a 
-                            href="https://admin.exchange.microsoft.com/#/messagetrace" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="font-semibold underline hover:text-blue-800"
-                          >
-                            Click here to start downloading reports
-                          </a></p>
-                          <p>2. Click on <strong>"Custom queries"</strong></p>
-                          <p>3. Click on either <strong>"Last two weeks"</strong> or <strong>"Last week"</strong></p>
-                          <p>4. Ensure <strong>"Extended report"</strong> is checked</p>
-                          <p>5. Click on <strong>"Next"</strong>, then <strong>"Save"</strong></p>
-                          <p>6. Download the generated CSV file and upload it above</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Last Email Date Indicator */}
-                  {csvFiles.length > 0 && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                      <div className="flex items-center space-x-2">
-                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div className="text-sm text-blue-800">
-                          <span className="font-medium">Last email received:</span>
-                          <span className="ml-1">{formatLastEmailDate(getLatestEmailDate())}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* File List */}
-                  <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
-                    <div className="flex justify-between items-center mb-4 border-b border-emerald-100 pb-2">
-                      <h2 className="text-lg font-semibold text-emerald-800">Available Files</h2>
-                      {csvFiles.length > 0 && (
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={selectAllFiles}
-                            className="text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700"
-                          >
-                            All
-                          </button>
-                          <button
-                            onClick={deselectAllFiles}
-                            className="text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-700"
-                          >
-                            None
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {loading ? (
-                      <div className="text-center py-4">
-                        <div className="text-gray-600">Loading files...</div>
-                      </div>
-                    ) : csvFiles.length === 0 ? (
-                      <div className="text-center py-4 text-gray-500">
-                        No CSV files uploaded yet.
-                      </div>
-                    ) : (
-                      <>
-                        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                          <div className="text-sm text-gray-700">
-                            <div className="font-medium">Selected: {selectedFiles.length} of {csvFiles.length} files</div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {analyticsMode === 'all' ? 'Showing all files' : 'Showing selected files only'}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          {csvFiles.map((file) => {
-                            const isSelected = selectedFiles.some(f => f.name === file.name)
-                            return (
-                              <div
-                                key={file.name}
-                                className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                                  isSelected
-                                    ? 'border-emerald-500 bg-emerald-50'
-                                    : 'border-gray-200 hover:border-emerald-200'
-                                }`}
-                                onClick={() => handleFileToggle(file)}
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-sm text-gray-900 truncate">
-                                      {file.name}
-                                    </div>
-                                    <div className="text-xs text-gray-500 mt-1">
-                                      Uploaded: {new Date(file.modified).toLocaleDateString()}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      Size: {Math.round(file.size / 1024)} KB • Records: {file.recordCount || 0}
-                                    </div>
-                                    <div className="text-xs text-emerald-600 font-medium mt-1">
-                                      {formatDateRange(file.dateRange)}
-                                    </div>
-                                    <div className="mt-2 flex space-x-2">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          handleDownload(file.name)
-                                        }}
-                                        className="text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700 transition-colors"
-                                      >
-                                        Download
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          handleDelete(file.name)
-                                        }}
-                                        className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors"
-                                      >
-                                        Delete
-                                      </button>
-                                    </div>
-                                  </div>
-                                  <div className="ml-2">
-                                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-                                      isSelected 
-                                        ? 'border-emerald-500 bg-emerald-500' 
-                                        : 'border-gray-300'
-                                    }`}>
-                                      {isSelected && (
-                                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                        </svg>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  </>
-                )}
-                </div>
-
-                {/* Right Column - Analytics */}
-                <div className="flex-1 min-w-0">
-                  <div className="bg-white rounded-lg shadow-md border border-emerald-100 p-6">
-                    <h2 className="text-lg font-semibold text-emerald-800 mb-4 border-b border-emerald-100 pb-2">
-                      Email Analytics
-                      {selectedFiles.length > 0 && (
-                        <span className="ml-2 text-sm font-normal text-gray-600">
-                          ({selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''})
-                        </span>
-                      )}
-                    </h2>
-                    {selectedFiles.length > 0 ? (
-                      <EnhancedEmailAnalytics files={selectedFiles} />
-                    ) : csvFiles.length === 0 ? (
-                      <div className="text-center py-12 text-gray-500">
-                        Upload CSV files to view email analytics
-                      </div>
-                    ) : (
-                      <div className="text-center py-12 text-gray-500">
-                        Select at least one CSV file to view analytics
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-          )}
-        </main>
-
-        {/* Admin Modal */}
-        <AdminModal isOpen={showAdminModal} onClose={() => setShowAdminModal(false)} />
-      </div>
+      <EmailAnalyticsShell session={session} onOpenAdmin={() => setShowAdminModal(true)} />
+      <AdminModal isOpen={showAdminModal} onClose={() => setShowAdminModal(false)} />
     </>
   )
 }
