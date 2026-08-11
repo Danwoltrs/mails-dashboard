@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { signOut } from 'next-auth/react'
 import s from '../../styles/EmailAnalytics.module.css'
-import { fmtDay, fmtInt } from '../../utils/format'
+import { describeStaleness, fmtDay, fmtInt } from '../../utils/format'
 
 export default function TopBar({
   session,
@@ -34,6 +34,7 @@ export default function TopBar({
 
   const name = session?.user?.name || session?.user?.email || ''
   const shortName = name.split(' ')[0] || name
+  const staleness = describeStaleness(lastEmailDate ? lastEmailDate.getTime() : NaN)
 
   return (
     <div className={s.top}>
@@ -57,6 +58,16 @@ export default function TopBar({
           </span>
         ) : null}
       </div>
+      {staleness ? (
+        <span
+          className={s.stale}
+          title={`The newest email in this selection is from ${fmtDay(
+            lastEmailDate
+          )}. Every period is measured back from that date, not from today.`}
+        >
+          Data is {staleness}
+        </span>
+      ) : null}
       <div className={s.right}>
         <button type="button" className={s.ghost} onClick={onManageFiles}>
           Manage files

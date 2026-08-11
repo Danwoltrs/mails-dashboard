@@ -219,6 +219,7 @@ export default function EmailAnalyticsShell({ session, onOpenAdmin }) {
         period={period}
         onPeriod={setPeriod}
         periodRange={periodRange}
+        periodAnchor={bounds.latest}
         direction={direction}
         onDirection={setDirection}
         scale={scale}

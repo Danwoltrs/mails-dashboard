@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import s from '../../styles/EmailAnalytics.module.css'
 import { PERIOD_GROUPS, periodLabel } from '../../utils/periods'
+import { fmtDay } from '../../utils/format'
 
 /**
  * Period picker.
@@ -13,7 +14,7 @@ import { PERIOD_GROUPS, periodLabel } from '../../utils/periods'
  * newest email rather than the wall clock (see utils/periods.js), so without
  * that line "This week" would be quietly ambiguous.
  */
-export default function PeriodMenu({ value, onChange, range }) {
+export default function PeriodMenu({ value, onChange, range, anchorMs }) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef(null)
 
@@ -71,6 +72,11 @@ export default function PeriodMenu({ value, onChange, range }) {
               </div>
             </div>
           ))}
+          {Number.isFinite(anchorMs) ? (
+            <p className={s.periodAnchor}>
+              Measured from the newest email, <b>{fmtDay(new Date(anchorMs))}</b> — not from today.
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>

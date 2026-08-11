@@ -41,6 +41,7 @@ export default function ControlRail({
   period,
   onPeriod,
   periodRange,
+  periodAnchor,
   direction,
   onDirection,
   scale,
@@ -52,7 +53,12 @@ export default function ControlRail({
   return (
     <div className={s.rail}>
       <span className={s.lbl}>Period</span>
-      <PeriodMenu value={period} onChange={onPeriod} range={periodRange} />
+      <PeriodMenu
+        value={period}
+        onChange={onPeriod}
+        range={periodRange}
+        anchorMs={periodAnchor}
+      />
       <span className={`${s.lbl} ${s.gap}`}>Direction</span>
       <Seg label="Direction" options={DIRECTIONS} value={direction} onChange={onDirection} />
       <div className={s.spacer} />
