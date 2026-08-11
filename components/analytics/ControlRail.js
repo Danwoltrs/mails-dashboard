@@ -1,11 +1,5 @@
 import s from '../../styles/EmailAnalytics.module.css'
-
-const PERIODS = [
-  { id: 'all', label: 'All time', hint: 'Everything in the selected files' },
-  { id: 'year', label: 'Year', hint: 'Last 365 days of data' },
-  { id: 'month', label: 'Month', hint: 'Last 30 days of data' },
-  { id: 'week', label: 'Week', hint: 'Last 7 days of data' },
-]
+import PeriodMenu from './PeriodMenu'
 
 const DIRECTIONS = [
   { id: 'all', label: 'All', hint: 'Sent by, or addressed to, each person' },
@@ -46,6 +40,7 @@ function Seg({ options, value, onChange, disabled, label }) {
 export default function ControlRail({
   period,
   onPeriod,
+  periodRange,
   direction,
   onDirection,
   scale,
@@ -57,7 +52,7 @@ export default function ControlRail({
   return (
     <div className={s.rail}>
       <span className={s.lbl}>Period</span>
-      <Seg label="Period" options={PERIODS} value={period} onChange={onPeriod} />
+      <PeriodMenu value={period} onChange={onPeriod} range={periodRange} />
       <span className={`${s.lbl} ${s.gap}`}>Direction</span>
       <Seg label="Direction" options={DIRECTIONS} value={direction} onChange={onDirection} />
       <div className={s.spacer} />

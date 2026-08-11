@@ -8,6 +8,15 @@
     },
     "pages/api/download-csv.js": {
       "maxDuration": 120
+    },
+    "pages/api/sync-graph.js": {
+      "maxDuration": 300
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/sync-graph",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }

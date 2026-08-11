@@ -1,6 +1,7 @@
 import { generateEmailUniqueId } from './csv'
 import { resolvePerson } from './roster'
 import { parseUtcMs, localFields } from './timezone'
+import { resolvePeriodRange } from './periods'
 
 /**
  * Aggregation for the compact staff comparison view.
@@ -69,7 +70,7 @@ function senderOf(row) {
   return sender
 }
 
-export const PERIOD_DAYS = { week: 7, month: 30, year: 365 }
+export { resolvePeriodRange } from './periods'
 
 /* ------------------------------------------------------------------ *
  * Recipient index
@@ -194,8 +195,9 @@ export function buildAnalytics({
   const wantSent = direction === 'all' || direction === 'sent'
   const wantReceived = direction === 'all' || direction === 'received'
 
-  const days = PERIOD_DAYS[period]
-  const from = days && latestMs ? latestMs - days * 86400000 : null
+  // Half-open [from, to): `to` is exclusive so "last month" and "this month"
+  // cannot both claim a message timestamped exactly at midnight on the 1st.
+  const { from, to } = resolvePeriodRange(period, latestMs)
 
   const accumulators = new Map()
   const teamHour = new Array(24).fill(0)
@@ -249,6 +251,7 @@ export function buildAnalytics({
       continue
     }
     if (from !== null && ms < from) continue
+    if (to !== null && ms >= to) continue
 
     const { hour, weekday } = localFields(ms)
     const sender = senderOf(row)
@@ -364,6 +367,7 @@ export function buildAnalytics({
     sharedMax: Math.max(0, ...people.map((p) => p.matrixMax)),
     topTotal: people.length ? people[0].total : 0,
     periodFrom: from,
+    periodTo: to,
   }
 }
 

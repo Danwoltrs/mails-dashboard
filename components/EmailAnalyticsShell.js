@@ -8,6 +8,7 @@ import WeekHourGrids from './analytics/WeekHourGrids'
 import FileDrawer from './analytics/FileDrawer'
 import MoreAnalytics from './analytics/MoreAnalytics'
 import { buildAnalytics, scanBounds } from '../utils/analytics'
+import { DEFAULT_PERIOD, describeRange } from '../utils/periods'
 import { downloadSummaryCsv } from '../utils/exportSummary'
 import { useEmailData } from '../utils/useEmailData'
 import { fmtInt } from '../utils/format'
@@ -19,7 +20,7 @@ export default function EmailAnalyticsShell({ session, onOpenAdmin }) {
   const [selected, setSelected] = useState([])
   const [filesLoading, setFilesLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [period, setPeriod] = useState('all')
+  const [period, setPeriod] = useState(DEFAULT_PERIOD)
   const [direction, setDirection] = useState('all')
   const [scale, setScale] = useState('shared')
   const [view, setView] = useState('both')
@@ -85,6 +86,11 @@ export default function EmailAnalyticsShell({ session, onOpenAdmin }) {
         latestMs: bounds.latest,
       }),
     [data, recipientIndex, direction, period, bounds.latest]
+  )
+
+  const periodRange = useMemo(
+    () => describeRange({ from: result.periodFrom, to: result.periodTo }, bounds),
+    [result.periodFrom, result.periodTo, bounds]
   )
 
   const dedup = data?.deduplicationStats
@@ -204,7 +210,7 @@ export default function EmailAnalyticsShell({ session, onOpenAdmin }) {
         fileCount={data?.fileCount ?? selected.length}
         lastEmailDate={bounds.latest ? new Date(bounds.latest) : null}
         onManageFiles={() => setDrawerOpen(true)}
-        onExport={() => downloadSummaryCsv(result, { period, direction })}
+        onExport={() => downloadSummaryCsv(result, { period, direction, periodRange })}
         canExport={hasPeople}
         onOpenAdmin={onOpenAdmin}
       />
@@ -212,6 +218,7 @@ export default function EmailAnalyticsShell({ session, onOpenAdmin }) {
       <ControlRail
         period={period}
         onPeriod={setPeriod}
+        periodRange={periodRange}
         direction={direction}
         onDirection={setDirection}
         scale={scale}
@@ -236,6 +243,7 @@ export default function EmailAnalyticsShell({ session, onOpenAdmin }) {
         onDelete={handleDelete}
         onUploaded={loadFiles}
         loading={filesLoading}
+        isAdmin={!!session?.user?.isAdmin}
       />
     </div>
   )

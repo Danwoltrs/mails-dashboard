@@ -84,3 +84,20 @@ export function localFields(ms) {
     day: shifted.getUTCDate(),
   }
 }
+
+/**
+ * Inverse of localFields: the UTC instant of local midnight on a given local
+ * calendar date. Month and day roll over the way Date.UTC does, so
+ * localMidnightMs(2026, 12, 1) is January 1st 2027 and
+ * localMidnightMs(2026, 0, 0) is December 31st 2025 — which is what makes the
+ * quarter and month arithmetic in utils/periods.js safe at year boundaries.
+ *
+ * The offset depends on the instant we are looking for, so it is applied twice:
+ * the first pass gets us within a day, the second lands exactly. Brazil has had
+ * no DST since 2019, so in practice the first pass is already correct.
+ */
+export function localMidnightMs(year, month, day = 1) {
+  const wall = Date.UTC(year, month, day)
+  const first = wall - offsetMsFor(wall)
+  return wall - offsetMsFor(first)
+}

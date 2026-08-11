@@ -26,13 +26,41 @@ export default function FileDrawer({
   onDelete,
   onUploaded,
   loading,
+  isAdmin,
 }) {
   const drawerRef = useRef(null)
   const restoreRef = useRef(null)
   const [dragging, setDragging] = useState(false)
   const [showHowto, setShowHowto] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncNote, setSyncNote] = useState(null)
   const { uploading, preparing, progress, message, queue, currentIndex, upload } =
     useCsvUpload(onUploaded)
+
+  const runSync = async () => {
+    setSyncing(true)
+    setSyncNote(null)
+    try {
+      const response = await fetch('/api/sync-graph', { method: 'POST' })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setSyncNote({ error: true, text: payload.error || `Sync failed (${response.status})` })
+        return
+      }
+      const months = (payload.written || []).map((entry) => entry.month).join(', ')
+      setSyncNote({
+        error: false,
+        text: months
+          ? `Synced ${fmtInt(payload.emails || 0)} emails into ${months}`
+          : 'Sync ran, nothing new to write',
+      })
+      onUploaded()
+    } catch (error) {
+      setSyncNote({ error: true, text: error.message || 'Sync failed' })
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   useEffect(() => {
     if (!open) return undefined
@@ -139,6 +167,31 @@ export default function FileDrawer({
         </div>
 
         {message ? <p className={s.dnote}>{message}</p> : null}
+
+        {isAdmin ? (
+          <div className={s.syncBox}>
+            <div className={s.syncRow}>
+              <b>Automatic sync</b>
+              <button
+                type="button"
+                className={s.link}
+                onClick={runSync}
+                disabled={syncing || uploading}
+              >
+                {syncing ? 'Syncing…' : 'Sync now'}
+              </button>
+            </div>
+            <p className={s.dnote}>
+              Pulls message trace straight from Microsoft Graph each night. Covers the last 90
+              days only — older months stay as uploaded files.
+            </p>
+            {syncNote ? (
+              <p className={`${s.dnote}${syncNote.error ? ` ${s.dnoteBad}` : ''}`}>
+                {syncNote.text}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className={s.dtools}>
           <button type="button" className={s.link} onClick={onSelectAll}>

@@ -1,4 +1,5 @@
 import { DAY_NAMES, hourLabel } from './format'
+import { periodLabel } from './periods'
 
 function cell(value) {
   const text = value == null ? '' : String(value)
@@ -8,7 +9,7 @@ function cell(value) {
 /**
  * Per-person aggregates as CSV — the same numbers the panels show.
  */
-export function buildSummaryCsv(result, { period, direction }) {
+export function buildSummaryCsv(result, { period, direction, periodRange }) {
   const header = [
     'name',
     'email',
@@ -40,8 +41,11 @@ export function buildSummaryCsv(result, { period, direction }) {
     ...person.byWeekday,
   ])
 
+  // The resolved window, not just the preset id: "last quarter" alone does not
+  // say which quarter, and these exports get filed and reread months later.
   const meta = [
-    [`# period`, period],
+    [`# period`, periodLabel(period)],
+    [`# range`, periodRange || ''],
     [`# direction`, direction],
     [`# emails`, result.stats.totalEmails],
     [`# timezone`, 'America/Sao_Paulo'],
