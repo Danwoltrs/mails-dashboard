@@ -182,8 +182,9 @@ export default function FileDrawer({
               </button>
             </div>
             <p className={s.dnote}>
-              Pulls message trace straight from Microsoft Graph each night. Covers the last 90
-              days only — older months stay as uploaded files.
+              Pulls message trace straight from Microsoft Graph each night, covering the last 45
+              days. Graph keeps 90 days at most, and cannot backfill further — older months stay
+              as uploaded files.
             </p>
             {syncNote ? (
               <p className={`${s.dnote}${syncNote.error ? ` ${s.dnoteBad}` : ''}`}>

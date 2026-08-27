@@ -2,6 +2,23 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "./auth/[...nextauth]"
 import { list } from '@vercel/blob';
 
+/**
+ * Blob pathnames are stable and Graph-synced months are rewritten in place, so
+ * the URL alone does not identify a version: the CDN serves the previous body for
+ * up to a minute after an overwrite, and the browser keeps its own copy for as
+ * long as the blob's cache-control says. Stamping the upload time makes every
+ * rewrite a distinct URL, which is Vercel's documented remedy for overwritten
+ * blobs — and it is why lowering cacheControlMaxAge on the put would not have
+ * worked: 60s is the SDK's floor and the propagation delay is independent of it.
+ *
+ * Every consumer reads `url` from this endpoint, so stamping it here covers both
+ * the dashboard loader and the drawer.
+ */
+function versionedUrl(blob) {
+  const stamp = blob.uploadedAt ? new Date(blob.uploadedAt).getTime() : 0
+  return Number.isFinite(stamp) && stamp > 0 ? `${blob.url}?v=${stamp}` : blob.url
+}
+
 // Helper function to parse CSV and extract date range from blob URL
 const extractDateRangeFromCSV = async (blobUrl) => {
   try {
@@ -122,9 +139,11 @@ export default async function handler(req, res) {
           const filename = blob.pathname.replace('mails/', '');
           
           // Extract date range and record count from CSV (with error handling)
+          const url = versionedUrl(blob);
+
           let csvAnalysis = null;
           try {
-            csvAnalysis = await extractDateRangeFromCSV(blob.url);
+            csvAnalysis = await extractDateRangeFromCSV(url);
           } catch (csvError) {
             console.log('CSV analysis error for', filename, ':', csvError.message);
             csvAnalysis = { recordCount: 0, dateRange: null };
@@ -134,7 +153,7 @@ export default async function handler(req, res) {
             name: filename,
             size: blob.size,
             modified: blob.uploadedAt,
-            url: blob.url, // Direct blob URL for downloads
+            url, // Version-stamped blob URL — see versionedUrl above
             recordCount: csvAnalysis?.recordCount || 0,
             dateRange: csvAnalysis?.dateRange || null
           };

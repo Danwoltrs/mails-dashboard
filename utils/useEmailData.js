@@ -20,8 +20,12 @@ export function useEmailData(files) {
   const [state, setState] = useState(EMPTY)
   const runRef = useRef(0)
 
+  // Keyed on content, not just identity. Graph-synced months are rewritten in
+  // place under a stable name, so a name-only key is byte-identical after every
+  // sync and the effect never re-runs: the drawer reports "Synced 4,312 emails"
+  // over a dashboard showing yesterday's numbers.
   const fileKey = (files || [])
-    .map((file) => file.name)
+    .map((file) => `${file.name}@${file.modified || ''}#${file.size || 0}`)
     .sort()
     .join('|')
 

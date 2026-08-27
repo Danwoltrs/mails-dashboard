@@ -6,8 +6,11 @@ import { localFields, localMidnightMs } from './timezone'
  * Microsoft Graph message trace ingestion.
  *
  * Replaces the manual "export from the admin centre, drop the CSV in" loop.
- * Microsoft retired the Reporting Web Service message trace endpoints on
- * 6 April 2026; the Graph API below is the supported successor.
+ * Microsoft began retiring the Reporting Web Service message trace endpoints on
+ * 8 April 2026, phased, Multi Tenant (WW) first — 6 April 2026 was the
+ * migrate-by advisory, not the switch-off. The Graph API below is the supported
+ * successor. (The Get-MessageTrace PowerShell cmdlets are a separate
+ * deprecation, superseded by Get-MessageTraceV2.)
  *
  * The output is byte-compatible with what utils/prepareCsv.js produces from a
  * hand-uploaded export, so nothing downstream — parsing, dedup, the recipient
@@ -25,16 +28,24 @@ import { localFields, localMidnightMs } from './timezone'
  * Docs: https://learn.microsoft.com/en-us/exchange/monitoring/trace-an-email-message/graph-api-message-trace
  */
 
-const GRAPH_BASE = 'https://graph.microsoft.com/beta/admin/exchange/tracing/messageTraces'
+const GRAPH_BASE = 'https://graph.microsoft.com/v1.0/admin/exchange/tracing/messageTraces'
 const DAY = 86400000
 
 export const MAX_LOOKBACK_DAYS = 90
+
+// Pulled off the 90-day floor so a range computed here is still inside
+// retention by the time the request reaches Graph. See resolveSyncRange.
+export const RETENTION_MARGIN_MS = 5 * 60000
 export const MAX_WINDOW_DAYS = 10
 export const PAGE_SIZE = 5000
 
-// Graph allows 100 requests per tenant per rolling 5 minutes, shared between
-// the trace and trace-detail endpoints. Staying well under it leaves headroom
-// for a manual "Sync now" landing on top of the nightly cron.
+// Graph allows 100 requests per tenant per rolling 5 minutes, counted separately
+// for the trace and the trace-detail endpoints.
+//
+// This is a per-run cap, not a rate limiter: it bounds how much one invocation
+// will fetch before giving up, and it does not reset over time. Two runs racing
+// (a manual "Sync now" landing on top of the nightly cron) each get their own 80
+// against a shared tenant budget of 100, so avoid overlapping them.
 const REQUEST_BUDGET = 80
 
 /* ------------------------------------------------------------------ *
@@ -95,9 +106,13 @@ function isoAt(ms) {
 }
 
 /**
- * Split a range into windows Graph will accept. Ranges are half-open going in
- * and the filter is inclusive on both ends, so each window's end is pulled back
- * a second — any straggler that still lands twice collapses in grouping anyway.
+ * Split a range into windows Graph will accept.
+ *
+ * Windows are half-open going in but the filter is inclusive on both ends, so
+ * consecutive windows overlap by the boundary second. That is deliberate: an
+ * overlap costs nothing because groupTraces keys on the message id and collapses
+ * the duplicate, whereas pulling the end back to close the overlap opens a
+ * one-second hole at every boundary that no later run would ever revisit.
  */
 export function splitWindows(fromMs, toMs, windowDays = MAX_WINDOW_DAYS) {
   const windows = []
@@ -149,7 +164,7 @@ export async function fetchMessageTraces({ token, fromMs, toMs, onProgress }) {
   for (const window of splitWindows(fromMs, toMs)) {
     const filter =
       `receivedDateTime ge ${isoAt(window.start)} and ` +
-      `receivedDateTime le ${isoAt(window.end - 1000)}`
+      `receivedDateTime le ${isoAt(window.end)}`
     let url = `${GRAPH_BASE}?$filter=${encodeURIComponent(filter)}&$top=${PAGE_SIZE}`
 
     while (url) {
@@ -208,7 +223,8 @@ export function groupTraces(traces) {
       messages.set(key, entry)
     }
 
-    const timestamp = trace.receivedDateTime ? isoAt(Date.parse(trace.receivedDateTime)) : ''
+    const receivedMs = Date.parse(trace.receivedDateTime || '')
+    const timestamp = Number.isFinite(receivedMs) ? isoAt(receivedMs) : ''
     if (timestamp && (!entry.timestamp || timestamp < entry.timestamp)) entry.timestamp = timestamp
     if (!entry.sender && trace.senderAddress) entry.sender = trace.senderAddress
     if (!entry.subject && trace.subject) entry.subject = trace.subject
@@ -301,7 +317,11 @@ export function monthKeyOf(ms) {
  * with a truncated one.
  */
 export function resolveSyncRange(nowMs, days = 0) {
-  const floor = nowMs - MAX_LOOKBACK_DAYS * DAY
+  // The margin matters: without it a ?days=90 backfill computes a start exactly
+  // 90 days old, then loses more to token exchange, request latency and isoAt()
+  // truncating toward the past — and Graph rejects the whole window as outside
+  // retention. The documented backfill could never run.
+  const floor = nowMs - MAX_LOOKBACK_DAYS * DAY + RETENTION_MARGIN_MS
   const { year, month, day } = localFields(nowMs)
 
   let from

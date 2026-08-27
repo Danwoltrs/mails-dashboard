@@ -3,16 +3,25 @@
 The dashboard can pull message trace data straight from Exchange Online instead
 of waiting for someone to export a CSV and drop it in the file drawer.
 
-Microsoft retired the Reporting Web Service message trace endpoints on
-**6 April 2026**. The Graph API below is the supported replacement.
+Microsoft **began** retiring the Reporting Web Service message trace endpoints
+on **8 April 2026** — phased, Multi Tenant (WW) environment first. 6 April 2026
+was the migrate-by advisory, not the switch-off. The Graph API below is the
+supported replacement. (The `Get-MessageTrace` PowerShell cmdlets are a separate
+deprecation, superseded by `Get-MessageTraceV2`.)
+
+**Setting this up for the first time? Follow
+[graph-sync-setup.md](graph-sync-setup.md) instead** — this page explains how the
+sync works; that one is the ordered checklist of what to click.
 
 ## What it does
 
 A nightly Vercel cron job hits `/api/sync-graph`, which:
 
 1. Gets an app-only token from Microsoft Entra.
-2. Pulls message trace for the current month to date (walking the range in
-   10-day chunks, which is Graph's per-query limit).
+2. Pulls the last 45 days of message trace, snapped back to a month boundary
+   (walking the range in 10-day chunks, which is Graph's per-query limit). 45
+   rather than "the current month" so a month that goes unsynced while the job is
+   broken still gets picked up before it ages out of retention.
 3. Collapses trace rows to one row per email, unioning recipients.
 4. Writes one CSV per Santos calendar month to blob storage as
    `mails/graph-YYYY-MM.csv`.
@@ -47,11 +56,22 @@ mailbox and a real person is kept.
 | Retention | 90 days | **Graph cannot backfill.** The 29 uploaded files stay as the historical archive. |
 | Query span | 10 days | Wider ranges are chunked automatically. |
 | Page size | 5,000 results | Paged via `@odata.nextLink`. |
-| Throttling | 100 requests / 5 min / tenant | A normal run uses well under 20. |
+| Throttling | 100 requests / 5 min / tenant | Counted separately per endpoint. A normal run uses well under 20. |
+| No `$filter` | last 48 hours | Which is why every query sends an explicit `receivedDateTime` range. |
 
-The sync refuses to overwrite an existing month file when the 90-day floor has
-cut into that month — older data does not come back, and a truncated file must
-not replace a complete one. Pass `?force=1` to override.
+The sync **skips** any month the 90-day floor cuts into, whether or not a file
+for it already exists. A partial month must not replace a complete one, and it
+must not be written under a name that reads as complete either — a file called
+`graph-2026-05.csv` that silently begins on the 28th is worse than no file, because
+the guard would then protect it forever. The response lists it under `skipped`
+with the coverage start.
+
+To override, name the month: `?force=2026-05`. It is deliberately not a boolean.
+Which month sits on the floor walks forward with the calendar, so a `force=1`
+copied from an earlier run — or from this page — would eventually replace a
+*complete* month file with the few days still inside retention. Naming the month
+makes a stale override do nothing instead of destroying data that cannot be
+re-fetched.
 
 ## One-time setup
 
@@ -75,8 +95,9 @@ Graph** → **Application permissions** → add:
 ExchangeMessageTrace.Read.All
 ```
 
-Then click **Grant admin consent**. It must be an *application* permission, not
-delegated — the cron run has no signed-in user.
+Then click **Grant admin consent**. A delegated variant of this scope does exist,
+but the cron has no signed-in user, so it must be the **application** one. No
+Exchange Online RBAC role assignment is needed on top of it.
 
 ### 3. Create a client secret
 
@@ -147,10 +168,13 @@ Manual backfill of everything Graph still has:
 POST /api/sync-graph?days=90
 ```
 
+`days` is clamped to 1–90; anything else falls back to the 45-day default.
+
 ## Failure modes
 
 | Symptom | Cause |
 |---|---|
+| Nightly cron does nothing, no error anywhere | `CRON_SECRET` unset or stale — the cron then falls through to the admin-session branch and 401s. Every rejection now logs to the function log; check there first. |
 | `Missing: GRAPH_CLIENT_ID, …` | Env vars not set, or set but not redeployed. |
 | `401` mentioning service principal | Step 4 not done, or still provisioning. Wait. |
 | `403` from Graph | `ExchangeMessageTrace.Read.All` missing, delegated instead of application, or admin consent not granted. |

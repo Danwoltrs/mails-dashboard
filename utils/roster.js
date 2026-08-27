@@ -37,6 +37,36 @@ export const EXCLUDED_ADDRESSES = [
   'noreply@wolthers.com',
 ]
 
+/**
+ * Local-part patterns that are never a person, matched against internal
+ * addresses that are not listed in ROSTER.
+ *
+ * EXCLUDED_ADDRESSES is an exact-match list, which was enough while the data
+ * came from hand-made exports covering a handful of mailboxes. A tenant-wide
+ * Graph pull sees everything the tenant sends and receives — postmaster, bounce
+ * handlers, service accounts, room and equipment mailboxes, the Exchange system
+ * mailbox — and the auto-discovery fallback below would mint each one a staff
+ * row, inflating the active-staff count and diluting everyone's share.
+ *
+ * Kept as patterns rather than exact addresses so it does not need editing every
+ * time someone provisions another service account.
+ */
+export const EXCLUDED_PATTERNS = [
+  /^postmaster$/,
+  /^mailer-?daemon$/,
+  /^(no-?reply|do-?not-?reply)/,
+  /^bounces?([._-]|$)/,
+  /^(alerts?|notifications?|notify|monitoring|monitor)([._-]|$)/,
+  /^(admin|administrator|root|daemon|sysadmin)$/,
+  /^(svc|service|sys|app|api|auto|automated|automailer)[._-]/,
+  /^(room|sala|meeting|conf|conference|equipment|resource|projector)[._-]/,
+  /^(backup|test|dummy|placeholder|donotuse)([._-]|$)/,
+  /[._-]bot$|^bot[._-]/,
+  // The Exchange Online system mailbox, e.g.
+  // MicrosoftExchange329e71ec88ae4615bbc36ab6ce41109e@...
+  /^microsoftexchange[0-9a-f]{16,}$/,
+]
+
 // Sorted by first name. `sends` is a note on what the current exports contain:
 // the message trace exports only capture outbound mail from a few mailboxes, so
 // everyone else appears as a recipient only.
@@ -87,6 +117,10 @@ ROSTER.forEach((person) => {
 const excluded = new Set(EXCLUDED_ADDRESSES.map((a) => a.trim().toLowerCase()))
 const discovered = new Map()
 
+function isExcludedPattern(localPart) {
+  return EXCLUDED_PATTERNS.some((pattern) => pattern.test(localPart))
+}
+
 function titleCase(value) {
   return value
     .split(/[._-]+/)
@@ -120,6 +154,10 @@ export function resolvePerson(address) {
 
   const domain = raw.slice(at + 1)
   if (!INTERNAL_DOMAINS.includes(domain)) return null
+
+  // Only applied to unlisted addresses: an explicit ROSTER entry always wins, so
+  // a real person whose mailbox happens to look systemic is never dropped.
+  if (isExcludedPattern(raw.slice(0, at))) return null
 
   let person = discovered.get(raw)
   if (!person) {
