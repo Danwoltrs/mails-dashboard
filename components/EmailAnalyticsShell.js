@@ -11,7 +11,7 @@ import { buildAnalytics, scanBounds } from '../utils/analytics'
 import { DEFAULT_PERIOD, describeRange } from '../utils/periods'
 import { downloadSummaryCsv } from '../utils/exportSummary'
 import { useEmailData } from '../utils/useEmailData'
-import { fmtInt } from '../utils/format'
+import { fmtDay, fmtInt } from '../utils/format'
 
 const DEFAULT_SORT_DIR = { volume: 'desc', peak: 'asc', late: 'desc' }
 
@@ -83,9 +83,8 @@ export default function EmailAnalyticsShell({ session, onOpenAdmin }) {
         recipientIndex,
         direction,
         period,
-        latestMs: bounds.latest,
       }),
-    [data, recipientIndex, direction, period, bounds.latest]
+    [data, recipientIndex, direction, period]
   )
 
   const periodRange = useMemo(
@@ -134,6 +133,7 @@ export default function EmailAnalyticsShell({ session, onOpenAdmin }) {
   }
 
   const hasPeople = result.people.length > 0
+  const periodEmpty = period !== 'all' && result.stats.totalEmails === 0
   const showRows = view !== 'grids'
   const showGrids = view !== 'rows'
 
@@ -175,6 +175,23 @@ export default function EmailAnalyticsShell({ session, onOpenAdmin }) {
       <div className={s.empty}>
         <b>Reading exports</b>
         {progress ? `Parsed ${progress.done} of ${progress.total} files` : 'Loading…'}
+      </div>
+    )
+  } else if (periodEmpty) {
+    body = (
+      <div className={s.empty}>
+        <b>No emails in this period</b>
+        {bounds.latest
+          ? `The newest email on file is from ${fmtDay(new Date(bounds.latest))}. Sync or upload a newer export to fill ${periodRange || 'this period'}.`
+          : 'Sync or upload an export that covers this period.'}
+        <div className={s.cta}>
+          <button type="button" className={s.solid} onClick={() => setPeriod('all')}>
+            Show all time
+          </button>
+          <button type="button" className={s.solid} onClick={() => setDrawerOpen(true)}>
+            Open file drawer
+          </button>
+        </div>
       </div>
     )
   } else if (!hasPeople) {
@@ -219,7 +236,7 @@ export default function EmailAnalyticsShell({ session, onOpenAdmin }) {
         period={period}
         onPeriod={setPeriod}
         periodRange={periodRange}
-        periodAnchor={bounds.latest}
+        newestEmailMs={bounds.latest}
         direction={direction}
         onDirection={setDirection}
         scale={scale}

@@ -190,14 +190,14 @@ export function buildAnalytics({
   recipientIndex = null,
   direction = 'all',
   period = 'all',
-  latestMs = null,
+  nowMs = Date.now(),
 } = {}) {
   const wantSent = direction === 'all' || direction === 'sent'
   const wantReceived = direction === 'all' || direction === 'received'
 
   // Half-open [from, to): `to` is exclusive so "last month" and "this month"
   // cannot both claim a message timestamped exactly at midnight on the 1st.
-  const { from, to } = resolvePeriodRange(period, latestMs)
+  const { from, to } = resolvePeriodRange(period, nowMs)
 
   const accumulators = new Map()
   const teamHour = new Array(24).fill(0)

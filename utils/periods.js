@@ -5,17 +5,14 @@ import { localFields, localMidnightMs } from './timezone'
  *
  * Two kinds live side by side:
  *
- *  - Rolling: "the last N days", measured back from the anchor. This is what
- *    the dashboard has always done.
+ *  - Rolling: "the last N days", measured back from now.
  *  - Calendar: "this week", "last quarter" — snapped to real Santos calendar
  *    boundaries, so a month means the 1st to the 1st and not 30 days.
  *
- * The anchor is the newest email in the current selection, NOT the wall clock.
- * That matters: exports arrive in batches, so the newest data is routinely
- * weeks or months behind today. Anchoring on the clock would make every
- * calendar preset render an empty dashboard until the day a fresh export lands.
- * Once the Graph sync is running daily the anchor sits within a day of now, and
- * "this week" quietly starts meaning the actual current week.
+ * Every preset is measured from today (Santos time), not from the newest email
+ * on file. A period with no data in it shows an empty dashboard — that is the
+ * honest answer, and it is what makes a stalled sync obvious instead of quietly
+ * re-labelling year-old numbers as "last 30 days".
  *
  * Ranges are half-open — [from, to) — so adjacent periods never double-count a
  * message that lands exactly on a boundary. null means unbounded on that side.
@@ -28,16 +25,16 @@ export const PERIOD_GROUPS = [
     label: 'Rolling',
     options: [
       { id: 'all', label: 'All time', hint: 'Everything in the selected files' },
-      { id: 'd7', label: 'Last 7 days', hint: '7 days back from the newest email' },
-      { id: 'd30', label: 'Last 30 days', hint: '30 days back from the newest email' },
-      { id: 'd90', label: 'Last 90 days', hint: '90 days back from the newest email' },
-      { id: 'd365', label: 'Last 12 months', hint: '365 days back from the newest email' },
+      { id: 'd7', label: 'Last 7 days', hint: '7 days back from today' },
+      { id: 'd30', label: 'Last 30 days', hint: '30 days back from today' },
+      { id: 'd90', label: 'Last 90 days', hint: '90 days back from today' },
+      { id: 'd365', label: 'Last 12 months', hint: '365 days back from today' },
     ],
   },
   {
     label: 'Calendar',
     options: [
-      { id: 'week', label: 'This week', hint: 'Sunday to Saturday, containing the newest email' },
+      { id: 'week', label: 'This week', hint: 'Sunday to Saturday, containing today' },
       { id: 'weekPrev', label: 'Last week', hint: 'The full week before this one' },
       { id: 'month', label: 'This month', hint: 'Month to date' },
       { id: 'monthPrev', label: 'Last month', hint: 'The full previous calendar month' },
@@ -65,18 +62,17 @@ const ROLLING_DAYS = { d7: 7, d30: 30, d90: 90, d365: 365 }
 /**
  * Resolve a preset to concrete epoch-millisecond bounds.
  *
- * Returns { from, to } with `from` inclusive and `to` exclusive; either may be
- * null for an open end. With no anchor (no data loaded yet) every preset
- * collapses to unbounded, which keeps the dashboard showing whatever it has
- * rather than blanking out.
+ * Returns { from, to } with `from` inclusive and `to` exclusive; both are null
+ * for "All time". Rolling windows run up to the end of today so the printed
+ * range reads "Sep 26 – Oct 26" rather than stopping at the last email.
  */
-export function resolvePeriodRange(id, anchorMs) {
-  if (!id || id === 'all' || !Number.isFinite(anchorMs)) return { from: null, to: null }
+export function resolvePeriodRange(id, nowMs = Date.now()) {
+  if (!id || id === 'all') return { from: null, to: null }
+
+  const { year, month, day, weekday } = localFields(nowMs)
 
   const days = ROLLING_DAYS[id]
-  if (days) return { from: anchorMs - days * DAY, to: null }
-
-  const { year, month, day, weekday } = localFields(anchorMs)
+  if (days) return { from: nowMs - days * DAY, to: localMidnightMs(year, month, day + 1) }
 
   switch (id) {
     case 'week':

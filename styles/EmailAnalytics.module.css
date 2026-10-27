@@ -766,6 +766,9 @@
 }
 .empty .cta {
   margin-top: 16px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
 }
 .solid {
   background: var(--green700);

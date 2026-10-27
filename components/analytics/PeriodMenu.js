@@ -10,11 +10,11 @@ import { fmtDay } from '../../utils/format'
  * Direction, Scale and View, and thirteen presets laid out flat would push it
  * onto a second row on any laptop screen.
  *
- * The resolved window is printed under the button. Presets are anchored on the
- * newest email rather than the wall clock (see utils/periods.js), so without
- * that line "This week" would be quietly ambiguous.
+ * The resolved window is printed beside the button. Presets count back from
+ * today (see utils/periods.js); the footer names the newest email on file so an
+ * empty period reads as "no data yet" rather than "broken".
  */
-export default function PeriodMenu({ value, onChange, range, anchorMs }) {
+export default function PeriodMenu({ value, onChange, range, newestEmailMs }) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef(null)
 
@@ -72,9 +72,9 @@ export default function PeriodMenu({ value, onChange, range, anchorMs }) {
               </div>
             </div>
           ))}
-          {Number.isFinite(anchorMs) ? (
+          {Number.isFinite(newestEmailMs) ? (
             <p className={s.periodAnchor}>
-              Measured from the newest email, <b>{fmtDay(new Date(anchorMs))}</b> — not from today.
+              Measured from today. Newest email on file: <b>{fmtDay(new Date(newestEmailMs))}</b>.
             </p>
           ) : null}
         </div>

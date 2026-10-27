@@ -41,7 +41,7 @@ export default function ControlRail({
   period,
   onPeriod,
   periodRange,
-  periodAnchor,
+  newestEmailMs,
   direction,
   onDirection,
   scale,
@@ -57,7 +57,7 @@ export default function ControlRail({
         value={period}
         onChange={onPeriod}
         range={periodRange}
-        anchorMs={periodAnchor}
+        newestEmailMs={newestEmailMs}
       />
       <span className={`${s.lbl} ${s.gap}`}>Direction</span>
       <Seg label="Direction" options={DIRECTIONS} value={direction} onChange={onDirection} />

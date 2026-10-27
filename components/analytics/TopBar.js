@@ -63,7 +63,7 @@ export default function TopBar({
           className={s.stale}
           title={`The newest email in this selection is from ${fmtDay(
             lastEmailDate
-          )}. Every period is measured back from that date, not from today.`}
+          )}. Periods after that date will show no data until a newer export or sync lands.`}
         >
           Data is {staleness}
         </span>
