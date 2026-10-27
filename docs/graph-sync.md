@@ -165,7 +165,7 @@ schedule is approximate; Pro runs it on time.
 Manual backfill of everything Graph still has:
 
 ```
-POST /api/sync-graph?days=90
+POST /api/sync-graph/?days=90
 ```
 
 `days` is clamped to 1–90; anything else falls back to the 45-day default.

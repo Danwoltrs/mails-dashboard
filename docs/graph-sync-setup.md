@@ -192,7 +192,7 @@ This is the step that rescues June and July 2026 before they age out. Every day
 of delay costs a day of data permanently.
 
 ```bash
-curl -X POST "https://mails.wolthers.com/api/sync-graph?days=90" \
+curl -X POST "https://mails.wolthers.com/api/sync-graph/?days=90" \
   -H "Authorization: Bearer <CRON_SECRET>"
 ```
 
